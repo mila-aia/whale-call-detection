@@ -18,7 +18,6 @@ jobs:
     - name: create virtual environment
       uses: conda-incubator/setup-miniconda@v2
       with:
-        mamba-version: "*"
         channels: conda-forge,defaults
         auto-activate-base: false
         activate-environment: whale
