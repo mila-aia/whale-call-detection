@@ -1,0 +1,15 @@
+whale_constant:
+  fw:
+    name: Fin Whale
+    window: 120
+    threshold_power_ratio: 3
+    threshold_detections: 5
+    high_cut_bandpass: 32
+    low_cut_bandpass: 12
+  bw:
+    name: Blue Whale
+    window: 720
+    threshold_power_ratio: 1.5
+    threshold_detections: 3
+    high_cut_bandpass: 32
+    low_cut_bandpass: 10
