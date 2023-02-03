@@ -6,3 +6,7 @@ torch==1.12.1
 mlflow==1.27.0
 librosa==0.9.2
 pytorch_lightning==1.2.7
+plotly==5.9.0
+matplotlib==3.6.2
+obspy==1.4.0
+pysmo==0.8.0
