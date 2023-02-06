@@ -114,7 +114,7 @@ def parse_args() -> Namespace:
     )
     arg_parser.add_argument(
         "--stations",
-        default=None,
+        default="PMAQ,ICQ,SNFQ,RISQ,SMQ,CNQ",
         type=str,
         help="the stations requested (seperated by comma)",
     )

@@ -34,6 +34,6 @@ optional arguments:
   --start_date START_DATE
                         the starting date (yyyy-mm-dd) of the request window (default: None)
   --end_date END_DATE   the starting date (yyyy-mm-dd) of the request window (default: None)
-  --stations STATIONS   the stations requested (seperated by comma) (default: None)
+  --stations STATIONS   the stations requested (seperated by comma) (default: PMAQ,ICQ,SNFQ,RISQ,SMQ,CNQ)
   --channels CHANNELS   the channels requested (seperated by comma) (default: HHE,HHN,HHZ,HNE,HNN,HNZ,EHZ)
 ```
