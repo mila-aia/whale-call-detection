@@ -4,14 +4,30 @@ from pathlib import Path
 import pandas as pd
 import wget
 from obspy.core import read
+from tqdm import tqdm
 
 
-FTP_URL = "ftp://ftp.seismo.nrcan.gc.ca/wfdata6/"
+FTP_URL = "ftp://ftp.seismo.nrcan.gc.ca/"
 NETWORK = "CN"
+YEAR_TO_DIR = {
+    "2020": "wfdata5",
+    "2021": "wfdata6",
+    "2022": "wfdata6",
+}  # Mapping from year requested to director on FTP server
 
 
 def MSEED_to_SAC(MSEED_file: str = None, out_dir: str = "./data") -> None:
+    """
+    Convert MSEED file to SAC file.
+    Arguments
+    ---------
+    MSEED_file : str
+        MSEED file name.
+    out_dir : int
+       Path to save the converted SAC file. (default : ./data)
+    """
     st = read(MSEED_file)
+    st.merge(method=0, fill_value=0)
     year = st[0].stats.starttime.year
     month = "%02d" % (st[0].stats.starttime.month)
     day = "%02d" % (st[0].stats.starttime.day)
@@ -45,7 +61,7 @@ def main() -> None:
     MSEED_output.mkdir(parents=True, exist_ok=True)
     SAC_output.mkdir(parents=True, exist_ok=True)
 
-    for date in pd.date_range(start_date, end_date):
+    for date in tqdm(pd.date_range(start_date, end_date)):
         year_requested = str(date.year)
         day_of_year = date.strftime("%j")
         for station in sta_list:
@@ -63,6 +79,7 @@ def main() -> None:
                 )
                 file_url = (
                     FTP_URL
+                    + YEAR_TO_DIR[year_requested]
                     + "/"
                     + year_requested
                     + "/"
@@ -101,13 +118,13 @@ def parse_args() -> Namespace:
         help="path to the output directory",
     )
     arg_parser.add_argument(
-        "--start_date",
+        "--start-date",
         default=None,
         type=str,
         help="the starting date (yyyy-mm-dd) of the request window",
     )
     arg_parser.add_argument(
-        "--end_date",
+        "--end-date",
         default=None,
         type=str,
         help="the starting date (yyyy-mm-dd) of the request window",
