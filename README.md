@@ -35,12 +35,14 @@ optional arguments:
   --end-date END_DATE   the starting date (yyyy-mm-dd) of the request window (default: None)
   --stations STATIONS   the stations requested (seperated by comma) (default: PMAQ,ICQ,SNFQ,RISQ,SMQ,CNQ)
   --channels CHANNELS   the channels requested (seperated by comma) (default: HHE,HHN,HHZ,HNE,HNN,HNZ,EHZ)
+```
 
 ## Pre-processing
 
 #### Labels
 The labels are generated using a matlab code. The output of this code is a matrix saved in a .mat format.
 This script reads this matrix and converts the labels (date of calls, time of calls, station monitored, whale type) to the correct format.
+
 ```
 usage: preprocess_labels.py [-h] [--output_dir OUTPUT_DIR] [--input_file INPUT_FILE]
 
