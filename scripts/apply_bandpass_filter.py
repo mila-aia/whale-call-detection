@@ -30,25 +30,10 @@ def main() -> None:
         st.filter(
             "bandpass", freqmin=freq_min, freqmax=freq_max, zerophase=True
         )
-        year = st[0].stats.starttime.year
-        month = "%02d" % (st[0].stats.starttime.month)
-        day = "%02d" % (st[0].stats.starttime.day)
-        network = st[0].stats.network
-        station = st[0].stats.station
-        location = st[0].stats.location
-        channel = st[0].stats.channel
-        datestring = "%s%s%s" % (year, month, day)
+        datestring = sac_file.split("/")[-2]
+        output_name = sac_file.split("/")[-1]
         date_folder = output_dir / datestring
         date_folder.mkdir(parents=True, exist_ok=True)
-        output_name = "%s.%s.%s.%s.%s.%s.%s.SAC" % (
-            year,
-            month,
-            day,
-            network,
-            station,
-            location,
-            channel,
-        )
         st.write(str(date_folder / output_name), format="SAC")
 
 
