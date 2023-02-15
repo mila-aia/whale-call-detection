@@ -2,14 +2,23 @@ whale_constant:
   fw:
     name: Fin Whale
     window: 120
-    threshold_power_ratio: 3
-    threshold_detections: 5
+    window_size: 5
     high_cut_bandpass: 32
     low_cut_bandpass: 12
+    call_duration: 1
+    call_frequency: 10
+    stadir_name: stadir
   bw:
     name: Blue Whale
     window: 720
-    threshold_power_ratio: 1.5
-    threshold_detections: 3
+    window_size: 40
     high_cut_bandpass: 32
     low_cut_bandpass: 10
+    call_duration: 8
+    call_frequency: 68
+    stadir_name: stadir_bw
+
+paths:
+  whale_data_cluster: /network/projects/aia/whale_call
+  list_sac_files: /network/projects/aia/whale_call/SAC_FILES_RAW.txt
+  mat_file: /network/projects/aia/whale_call/MATLAB_OUTPUT/WhaleDetectionsLSZ_new.mat
