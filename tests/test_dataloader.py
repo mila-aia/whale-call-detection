@@ -12,6 +12,8 @@ def test_init_datamodule() -> None:
     assert (
         MyDataModule.train_ds is not None and len(MyDataModule.train_ds) == 9
     )
-    assert MyDataModule.valid_ds is not None and len(MyDataModule.vali_ds) == 9
+    assert (
+        MyDataModule.valid_ds is not None and len(MyDataModule.valid_ds) == 9
+    )
     assert inp.shape == (2, 1, 501)
     assert target.shape == (2, 501)
