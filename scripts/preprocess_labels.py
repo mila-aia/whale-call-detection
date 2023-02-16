@@ -181,8 +181,8 @@ def main() -> None:
         list_randoms = []
         for _ in labels.index:
             list_randoms.append(
-                random.randint(  # nosec
-                    1,
+                random.uniform(  # nosec
+                    0,
                     param_data["whale_constant"][whale_type]["window_size"]
                     - param_data["whale_constant"][whale_type][
                         "call_duration"
