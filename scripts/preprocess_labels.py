@@ -1,4 +1,8 @@
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter, Namespace
+from argparse import (
+    ArgumentParser,
+    ArgumentDefaultsHelpFormatter,
+    Namespace,
+)
 from pathlib import Path
 import pandas as pd
 import scipy.io
@@ -137,13 +141,14 @@ def main() -> None:
     ]
 
     # Get list of files in dataframe
-    if args.bandpass_filter is True:
-        list_files_detailled = read_list_raw_files(
-            "/network/projects/aia/whale_call/SAC_FILES_RAW.txt"
-        )
-    else:
+    if args.bandpass_filter == "True":
         list_files_detailled = read_list_raw_files(
             "/network/projects/aia/whale_call/SAC_FILES_FILT.txt"
+        )
+    else:
+        print("False")
+        list_files_detailled = read_list_raw_files(
+            "/network/projects/aia/whale_call/SAC_FILES_RAW.txt"
         )
 
     # Loop for the 2 whale types
@@ -221,10 +226,10 @@ def main() -> None:
         )
 
         # Save results to dataframe
-        if args.bandpass_filter is True:
+        if args.bandpass_filter == "True":
             csv_name = whale_type + "_filt.csv"
         else:
-            csv_name = whale_type + ".csv"
+            csv_name = whale_type + "_raw.csv"
 
         final_df[
             [
@@ -252,8 +257,8 @@ def parse_args() -> Namespace:
 
     arg_parser.add_argument(
         "--bandpass_filter",
-        default=True,
-        type=bool,
+        default="True",
+        type=str,
         help="True if you want to use data with applied bandpass filter",
     )
 
