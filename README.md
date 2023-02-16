@@ -18,7 +18,7 @@ pre-commit install
 ```
 
 ## Data
-The seismic data used in this study is publicly available via Natural Resoures Canada's FTP server: `ftp://ftp.seismo.nrcan.gc.ca/wfdata6/`. We also prepare a scrcipt for data access.
+The seismic data used in this study is publicly available via Natural Resoures Canada's FTP server: `ftp://ftp.seismo.nrcan.gc.ca/`. We also prepare a scrcipt for data access.
 
 ```
 python scripts/download_data_ftp.py --h
