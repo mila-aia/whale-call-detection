@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import pytorch_lightning as pl
 import torch.nn.functional as F
+from typing import Any
 
 
 class DoubleConv(nn.Module):
@@ -102,7 +103,7 @@ class OutConv(nn.Module):
 
 class UNet(pl.LightningModule):
     def __init__(
-        self: pl.LightningModule,
+        self: nn.Module,
         n_channels: int,
         n_classes: int,
         bilinear: bool = False,
@@ -123,6 +124,7 @@ class UNet(pl.LightningModule):
         self.up3 = Up(256, 128 // factor, bilinear)
         self.up4 = Up(128, 64, bilinear)
         self.outc = OutConv(64, n_classes)
+        self.loss_fn = nn.CrossEntropyLoss()
 
     def forward(self: pl.LightningModule, x: torch.Tensor) -> torch.Tensor:
         x1 = self.inc(x)
@@ -137,6 +139,99 @@ class UNet(pl.LightningModule):
         logits = self.outc(x)
         return logits
 
+    def training_step(
+        self: pl.LightningModule, batch: torch.Tensor, batch_idx: torch.Tensor
+    ) -> dict:
+        """Runs a prediction step for training, returning the loss.
+        Parameters
+        ----------
+        Returns
+        -------
+        torch.Tensor
+            loss produced by the loss function.
+        """
+        sig, target = batch
+        pred = self.forward(sig)
+        loss = self.loss_fn(pred, target)
+        self.log("train_loss", loss)
+
+        return {
+            "loss": loss,
+        }
+
+    def training_epoch_end(
+        self: pl.LightningModule, training_step_outputs: list[dict]
+    ) -> None:
+        """Is called at the end of each epoch.
+        Parameters
+        ----------
+        training_step_outputs : typing.List[float]
+            A list of training metrics\
+                    produced by the training step.
+        """
+        for training_step_output in training_step_outputs:
+            train_loss_mean = training_step_output["loss"].mean()
+
+        self.log("overall_train_loss", train_loss_mean)
+
+    def validation_step(
+        self: pl.LightningModule, batch: torch.Tensor, batch_idx: torch.Tensor
+    ) -> dict:
+        """Runs a prediction step for validation, returning the loss.
+        Parameters
+        ----------
+        Returns
+        -------
+        torch.Tensor
+            loss produced by the loss function.
+        """
+        sig, target = batch
+        pred = self.forward(sig)
+        loss = self.loss_fn(pred, target)
+
+        return {
+            "val_loss": loss,
+        }
+
+    def validation_epoch_end(
+        self: pl.LightningModule, validation_step_outputs: list[dict]
+    ) -> None:
+        """Is called at the end of each epoch.
+        Parameters
+        ----------
+        validation_step_outputs : typing.List[float]
+            A list of validation metrics\
+                    produced by the training step.
+        """
+        for validation_step_output in validation_step_outputs:
+            val_loss_mean = validation_step_output["val_loss"].mean()
+
+        self.log("overall_val_loss", val_loss_mean)
+
+    def test_step(
+        self: pl.LightningModule, batch: torch.Tensor, batch_idx: torch.Tensor
+    ) -> dict:
+        """Runs a prediction step for testing, returning the loss.
+        Parameters
+        ----------
+        Returns
+        -------
+        torch.Tensor
+            loss produced by the loss function.
+        """
+        sig, target = batch
+        pred = self.forward(sig)
+        loss = self.loss_fn(pred, target)
+        self.log("test_loss", loss)
+
+        return {
+            "test_loss": loss,
+        }
+
+    def configure_optimizers(self: pl.LightningModule) -> Any:
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        return optimizer
+
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -146,8 +241,11 @@ if __name__ == "__main__":
     model = model.to(device)
 
     sig = torch.zeros([1, 1, 501]).to(device)
-    target = torch.zeros([1, 501]).to(device)
+    target = torch.empty(1, 501, dtype=torch.long).random_(2).to(device)
+
     print("input shape: ", sig.shape)
+    print("target shape: ", target.shape)
 
     pred = model.forward(sig)
     print("output shape: ", pred.shape)
+    print(model.loss_fn(pred, target))
