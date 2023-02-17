@@ -33,7 +33,7 @@ class DoubleConv(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-    def forward(self: nn.Module, x: torch.Tensor) -> None:
+    def forward(self: nn.Module, x: torch.Tensor) -> torch.Tensor:
         return self.double_conv(x)
 
 
