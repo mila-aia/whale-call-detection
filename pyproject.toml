@@ -1,3 +1,25 @@
+
+[tool.coverage.paths]
+source = ["whale"]
+
+[tool.coverage.run]
+branch = true
+source = ["whale"]
+
+[tool.isort]
+profile = "black"
+src_paths = ["whale", "tests"]
+
 [tool.black]
 line_length = 79
 target-version = ['py39']
+
+[tool.mypy]
+ignore_missing_imports = true
+scripts_are_modules = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+  "ignore::DeprecationWarning",
+]
