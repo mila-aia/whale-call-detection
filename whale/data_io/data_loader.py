@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import obspy
+import torch
 import pytorch_lightning as pl
 from torch.utils.data import Dataset, DataLoader
 
@@ -31,7 +32,7 @@ class WhaleDataset(Dataset):
     def __getitem__(
         self: Dataset,
         index: int,
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """__getitem__.
         Args:
             index (int): Get index item from the dataset.
@@ -53,12 +54,15 @@ class WhaleDataset(Dataset):
         time_call_end = obspy.UTCDateTime(self.labels["time_call_end"][index])
         index_call_start = int((time_call_start - start_time) * self.fs)
         index_call_end = int((time_call_end - start_time) * self.fs)
-        target_example = np.zeros(input_example.shape)
+        target_example = np.zeros(input_example.shape, dtype=np.int64)
         target_example[index_call_start : index_call_end + 1] = 1  # noqa: E203
 
         input_example = np.expand_dims(
             input_example, axis=0
         )  # add channel dimension
+
+        input_example = torch.from_numpy(input_example)
+        target_example = torch.from_numpy(target_example)
 
         return input_example, target_example
 
