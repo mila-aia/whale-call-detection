@@ -19,6 +19,7 @@ class WhaleDataset(Dataset):
             fs (int): Sampling rate of the seismic signal.
             normalize (bool): Normalize the waveform into [0,1].
         """
+        super().__init__()
         self.labels = pd.read_csv(labels_file)
         self.fs = fs
         self.normalize = normalize
