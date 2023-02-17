@@ -24,7 +24,7 @@ setup(
         "librosa==0.9.2",
         "pytorch_lightning==1.2.7",
         "obspy==1.3.0",
-        "matplotlib==1.16.0",
+        "matplotlib==3.6.3",
     ],
     entry_points={
         "console_scripts": ["main=whale.main:main"],
