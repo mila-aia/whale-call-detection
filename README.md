@@ -43,7 +43,17 @@ optional arguments:
 The labels are generated using a matlab code. The output of this code is a matrix saved in a .mat format.
 This script reads this matrix and converts the labels (date of calls, time of calls, station monitored, whale type) to the correct format.
 
-The output are 2 CSVs, one for blue whales (`bw_filt.csv` or `bw_raw.csv`) and one for fin whales (`fw_filt.csv` or `fw_raw.csv`) in the `/network/projects/aia/whale_call/LABELS` folder.
+You can choose if you want to apply a bandpass filter to the raw data by setting the flag `--bandpass_filter` to `True` or `False`.
+
+The output are 8 possible CSVs in the `/network/projects/aia/whale_call/LABELS` folder:
+
+`BW/`:
+`bw_component_grouped_filt.csv`  `bw_filt.csv`
+`bw_component_grouped_raw.csv`   `bw_raw.csv`
+
+`FW/`:
+`fw_component_grouped_filt.csv`  `fw_filt.csv`
+`fw_component_grouped_raw.csv`   `fw_raw.csv`
 
 ```
 usage: preprocess_labels.py [-h] [--output_dir OUTPUT_DIR] [--input_file INPUT_FILE]

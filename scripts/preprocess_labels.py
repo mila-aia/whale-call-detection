@@ -126,7 +126,9 @@ def main() -> None:
     input_file = Path(args.input_file)
 
     # Load .mat file
-    mat = scipy.io.loadmat(input_file)
+    mat = scipy.io.loadmat(
+        input_file, variable_names=["FWC", "BWC", "stadir", "stadir_bw"]
+    )
 
     # Load Fin & Blue whale calls from .mat
     colnames_WC = [
@@ -146,7 +148,6 @@ def main() -> None:
             "/network/projects/aia/whale_call/SAC_FILES_FILT.txt"
         )
     else:
-        print("False")
         list_files_detailled = read_list_raw_files(
             "/network/projects/aia/whale_call/SAC_FILES_RAW.txt"
         )
@@ -181,28 +182,6 @@ def main() -> None:
             seconds=param_data["whale_constant"][whale_type]["call_duration"]
         )
 
-        # Add random value to create start and end time of window
-
-        list_randoms = []
-        for _ in labels.index:
-            list_randoms.append(
-                random.uniform(  # nosec
-                    0,
-                    param_data["whale_constant"][whale_type]["window_size"]
-                    - param_data["whale_constant"][whale_type][
-                        "call_duration"
-                    ],
-                )
-            )
-
-        labels["random_t"] = list_randoms
-        labels["time_window_start"] = labels.apply(
-            lambda x: x.time_call_start - timedelta(seconds=x.random_t), axis=1
-        )
-        labels["time_window_end"] = labels["time_window_start"] + timedelta(
-            seconds=5
-        )
-
         # Reformat folder name
         labels["folder_date"] = (
             labels["date"].astype(str).apply(lambda x: "".join(x.split("-")))
@@ -228,8 +207,50 @@ def main() -> None:
         # Save results to dataframe
         if args.bandpass_filter == "True":
             csv_name = whale_type + "_filt.csv"
+            csv_name_grouped = whale_type + "_component_grouped_filt.csv"
         else:
             csv_name = whale_type + "_raw.csv"
+            csv_name_grouped = whale_type + "_component_grouped_raw.csv"
+
+        # Add random value to create start and end time of window
+        list_randoms = []
+        for _ in final_df.index:
+            rand_num = random.uniform(  # nosec
+                0,
+                param_data["whale_constant"][whale_type]["window_size"]
+                - param_data["whale_constant"][whale_type]["call_duration"],
+            )
+            list_randoms.append(rand_num)
+
+        final_df["random_t"] = list_randoms
+        final_df["time_window_start"] = final_df.apply(
+            lambda x: x.time_call_start - timedelta(seconds=x.random_t), axis=1
+        )
+        final_df["time_window_end"] = final_df[
+            "time_window_start"
+        ] + timedelta(seconds=5)
+
+        grouped_df = final_df.groupby(["station_code", "time_call_start"]).agg(
+            list_components=("component", lambda x: " ".join(x)),
+            number_components=("component", "count"),
+            R=("R", "max"),
+            SNR=("SNR", "max"),
+            file_path=(
+                "file_path",
+                lambda x: [a[:-7] + "CHANNEL" + a[-4:] for a in x][0],
+            ),
+            time_window_start=(
+                "time_window_start",
+                lambda x: [a for a in x][0],
+            ),
+            time_window_end=("time_window_end", lambda x: [a for a in x][0]),
+            time_call_end=("time_call_end", "min"),
+            whale_type=("whale_type", "min"),
+        )
+
+        grouped_df.to_csv(
+            labels_output / whale_type.upper() / csv_name_grouped, index=False
+        )
 
         final_df[
             [
@@ -245,7 +266,7 @@ def main() -> None:
                 "whale_type",
                 "component",
             ]
-        ].to_csv(labels_output / csv_name, index=False)
+        ].to_csv(labels_output / whale_type.upper() / csv_name, index=False)
 
 
 def parse_args() -> Namespace:
