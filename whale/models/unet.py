@@ -195,8 +195,10 @@ class UNet(pl.LightningModule):
         """
         for training_step_output in training_step_outputs:
             train_loss_mean = training_step_output["loss"].mean()
+            train_acc_mean = training_step_output["acc"].mean()
 
         self.log("overall_train_loss", train_loss_mean)
+        self.log("overall_train_acc", train_acc_mean)
 
     def validation_step(
         self: pl.LightningModule, batch: torch.Tensor, batch_idx: torch.Tensor
@@ -233,8 +235,10 @@ class UNet(pl.LightningModule):
         """
         for validation_step_output in validation_step_outputs:
             val_loss_mean = validation_step_output["val_loss"].mean()
+            val_acc_mean = validation_step_output["val_acc"].mean()
 
         self.log("overall_val_loss", val_loss_mean)
+        self.log("overall_val_acc", val_acc_mean)
 
     def test_step(
         self: pl.LightningModule, batch: torch.Tensor, batch_idx: torch.Tensor
