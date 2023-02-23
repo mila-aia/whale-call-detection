@@ -9,7 +9,9 @@ def test_init_datamodule() -> None:
     train_ds = MyDataModule.train_ds
     train_loader = MyDataModule.train_dataloader()
     dataiter = iter(train_loader)
-    inp, target = next(dataiter)
+    batch = next(dataiter)
+    sig = batch["sig"]
+    target = batch["target"]
     assert train_ds is not None and len(train_ds) == 4
-    assert inp.shape == (2, 1, 501)
+    assert sig.shape == (2, 1, 501)
     assert target.shape == (2, 501)
