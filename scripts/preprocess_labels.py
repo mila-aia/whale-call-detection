@@ -8,6 +8,8 @@ import pandas as pd
 import scipy.io
 from datetime import timedelta
 import random
+import numpy as np
+
 import yaml
 
 
@@ -152,6 +154,59 @@ def main() -> None:
             "/network/projects/aia/whale_call/SAC_FILES_RAW.txt"
         )
 
+    # Drop files
+    list_files_detailled["file"] = list_files_detailled["file_path"].apply(
+        lambda x: x.split("/")[-1]
+    )
+    print("Number of raw data files:", list_files_detailled.shape[0])
+
+    # Issues
+    npts_data_issues = (
+        pd.read_csv(
+            "/network/projects/aia/whale_call/ISSUES/npts_data_issues.csv"
+        )
+        .filename.apply(lambda x: x.split("/")[-1])
+        .values
+    )
+    date_data_issues = (
+        pd.read_csv(
+            "/network/projects/aia/whale_call/ISSUES/date_data_issues.csv"
+        )
+        .filename.apply(lambda x: x.split("/")[-1])
+        .values
+    )
+
+    # Null files
+    blue_whales_prblms = pd.read_csv(
+        "/network/projects/aia/whale_call/ISSUES/bw_0_values.csv"
+    )
+    fin_whales_prblms = pd.read_csv(
+        "/network/projects/aia/whale_call/ISSUES/fw_0_values.csv"
+    )
+    list_problematics_files = np.concatenate(
+        (
+            fin_whales_prblms[
+                (fin_whales_prblms["min"] == 0)
+                & (fin_whales_prblms["max"] == 0)
+            ].filename.unique(),
+            blue_whales_prblms[
+                (blue_whales_prblms["min"] == 0)
+                & (blue_whales_prblms["max"] == 0)
+            ].filename.unique(),
+        )
+    )
+    list_problematics_files = [
+        a.split("/")[-1] for a in list_problematics_files
+    ]
+
+    # Only keep files
+    list_files_detailled = list_files_detailled[
+        (~list_files_detailled.file.isin(npts_data_issues))
+        & (~list_files_detailled.file.isin(date_data_issues))
+        & (~list_files_detailled.file.isin(list_problematics_files))
+    ]
+    print("Number of files after removal:", list_files_detailled.shape[0])
+
     # Loop for the 2 whale types
     for whale_type in ["bw", "fw"]:
 
@@ -170,9 +225,11 @@ def main() -> None:
 
         # Plot counts of calls
         print(
-            "Number of {} calls detected: {}".format(
+            "Number of {} detections: {} | Number of {} calls: {}".format(
                 param_data["whale_constant"][whale_type]["name"],
                 labels.detection_id.nunique(),
+                param_data["whale_constant"][whale_type]["name"],
+                labels.shape[0],
             )
         )
 
