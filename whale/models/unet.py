@@ -3,6 +3,7 @@ from torch import nn
 import pytorch_lightning as pl
 import torch.nn.functional as F
 from typing import Any
+from whale.utils.metrics import SegmentationMetrics
 
 
 class DoubleConv(nn.Module):
@@ -136,8 +137,30 @@ class UNet(pl.LightningModule):
         x = self.up2(x, x3)
         x = self.up3(x, x2)
         x = self.up4(x, x1)
-        logits = self.outc(x)
+        logits = self.outc(x)  # Unnormalized logits for each class.
         return logits
+
+    def compute_metrics(
+        self,
+        predictions: torch.tensor,
+        targets: torch.tensor,
+    ) -> int:
+        """Computes the metrics.
+        Parameters
+        ----------
+        predictions : torch.Tensor
+            Predicted Mask.
+        targets : torch.Tensor
+            Ground Truth Mask.
+        Returns
+        -------
+        torch.Tensor
+            Segmentation mask.
+        """
+        seg_metrics = SegmentationMetrics(predictions, targets, self.n_classes)
+        acc = seg_metrics.compute_acc()
+
+        return acc
 
     def training_step(
         self: pl.LightningModule, batch: torch.Tensor, batch_idx: torch.Tensor
@@ -150,14 +173,15 @@ class UNet(pl.LightningModule):
         torch.Tensor
             loss produced by the loss function.
         """
-        sig, target = batch
-        pred = self.forward(sig)
-        loss = self.loss_fn(pred, target)
+        sig = batch["sig"]
+        target = batch["target"]
+        logits = self.forward(sig)
+        loss = self.loss_fn(logits, target)
         self.log("train_loss", loss)
+        preds = torch.softmax(logits, dim=1)
+        acc = self.compute_metrics(preds, target)
 
-        return {
-            "loss": loss,
-        }
+        return {"loss": loss, "acc": acc}
 
     def training_epoch_end(
         self: pl.LightningModule, training_step_outputs: list[dict]
@@ -185,13 +209,17 @@ class UNet(pl.LightningModule):
         torch.Tensor
             loss produced by the loss function.
         """
-        sig, target = batch
-        pred = self.forward(sig)
-        loss = self.loss_fn(pred, target)
+        sig = batch["sig"]
+        target = batch["target"]
+        logits = self.forward(sig)
+        loss = self.loss_fn(logits, target)
+        preds = torch.softmax(logits, dim=1)
+        acc = self.compute_metrics(preds, target)
 
-        return {
-            "val_loss": loss,
-        }
+        self.log("val_loss", loss)
+        self.log("val_acc", acc)
+
+        return {"val_loss": loss, "val_acc": acc}
 
     def validation_epoch_end(
         self: pl.LightningModule, validation_step_outputs: list[dict]
@@ -219,14 +247,17 @@ class UNet(pl.LightningModule):
         torch.Tensor
             loss produced by the loss function.
         """
-        sig, target = batch
-        pred = self.forward(sig)
-        loss = self.loss_fn(pred, target)
-        self.log("test_loss", loss)
+        sig = batch["sig"]
+        target = batch["target"]
+        logits = self.forward(sig)
+        loss = self.loss_fn(logits, target)
+        preds = torch.softmax(logits, dim=1)
+        acc = self.compute_metrics(preds, target)
 
-        return {
-            "test_loss": loss,
-        }
+        self.log("test_loss", loss)
+        self.log("test_acc", acc)
+
+        return {"test_loss": loss, "test_acc": acc}
 
     def configure_optimizers(self: pl.LightningModule) -> Any:
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
@@ -246,6 +277,10 @@ if __name__ == "__main__":
     print("input shape: ", sig.shape)
     print("target shape: ", target.shape)
 
-    pred = model.forward(sig)
-    print("output shape: ", pred.shape)
-    print(model.loss_fn(pred, target))
+    logits = model.forward(sig)
+    print("output shape: ", logits.shape)
+    print(model.loss_fn(logits, target))
+
+    preds = torch.softmax(logits, dim=1)
+    acc = model.compute_metrics(preds, target)
+    print(acc)
