@@ -1,8 +1,12 @@
 # Whale Call Detection 
+[__Setup__](#setup)
+| [__Data__](#data)
+| [__Usage__](#usage)
 
 This project uses Deep Learning techniques to improve whale call detection procedures based on public seismograph data. We focus on the call detections of the endangered species of Blue Whales and Fin Whales in the Lower St-Lawrence Seaway.
 
-## Installation
+## Setup
+### Installation
 1. Download and install the latest [Anaconda Python distribution](https://www.anaconda.com/distribution/#download-section)
 2. Execute the following commands to install all software requirements:
 ```
@@ -18,6 +22,7 @@ pre-commit install
 ```
 
 ## Data
+### Availability
 The seismic data used in this study is publicly available via Natural Resoures Canada's FTP server: `ftp://ftp.seismo.nrcan.gc.ca/`. We also prepare a scrcipt for data access.
 
 ```
@@ -37,7 +42,7 @@ optional arguments:
   --channels CHANNELS   the channels requested (seperated by comma) (default: HHE,HHN,HHZ,HNE,HNN,HNZ,EHZ)
 ```
 
-## Pre-processing
+### Pre-processing
 
 #### Labels
 The labels are generated using a matlab code. The output of this code is a matrix saved in a .mat format.
@@ -66,4 +71,13 @@ optional arguments:
                         True if you want to use data with applied bandpass filter (default: True)
   --input_file INPUT_FILE
                         path to the input file (default: /network/projects/aia/whale_call/MATLAB_OUTPUT/WhaleDetectionsLSZ_new.mat)
+```
+
+## Usage
+
+### Training
+
+To train a 1D UNet model on a subset of dataset for testing purpose:
+```
+python whale/train.py fit --config experiments/mini-test.yaml
 ```
