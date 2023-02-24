@@ -1,0 +1,45 @@
+trainer:
+  max_epochs: 5
+  accelerator: "auto"
+  move_metrics_to_cpu: True
+  log_every_n_steps: 5
+  fast_dev_run: False
+  enable_checkpointing: True
+  check_val_every_n_epoch: 1
+  logger: 
+    - class_path: whale.utils.loggers.CustomMLFLogger
+      init_args:
+        experiment_name: "unet_a"
+        run_name: "test"
+        save_dir: "./mlruns"
+
+  callbacks:
+  - class_path: pytorch_lightning.callbacks.ModelCheckpoint
+    init_args:
+      dirpath: "./ckpts/unet"
+      monitor: "overall_val_acc"
+      mode: "max"
+      auto_insert_metric_name: True
+      save_on_train_epoch_end: True
+
+data:
+  class_path: whale.data_io.data_loader.WhaleDataModule
+  init_args:
+    data_dir: /network/projects/aia/whale_call/LABELS/mini_data
+    batch_size: 32
+
+model:
+  class_path: whale.models.UNet
+  init_args:
+    n_channels: 1 
+    n_classes: 2
+
+optimizer:
+  class_path: torch.optim.AdamW
+  init_args:
+    lr: 0.0001
+    betas:
+    - 0.9
+    - 0.999
+    eps: 1.0e-09
+    weight_decay: 0.0002
