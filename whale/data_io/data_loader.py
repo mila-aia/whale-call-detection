@@ -32,7 +32,7 @@ class WhaleDataset(Dataset):
     def __getitem__(
         self: Dataset,
         index: int,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> dict:
         """__getitem__.
         Args:
             index (int): Get index item from the dataset.
@@ -64,7 +64,11 @@ class WhaleDataset(Dataset):
         input_example = torch.from_numpy(input_example)
         target_example = torch.from_numpy(target_example)
 
-        return input_example, target_example
+        return {
+            "data_index": index,
+            "sig": input_example,
+            "target": target_example,
+        }
 
 
 class WhaleDataModule(pl.LightningDataModule):
@@ -108,7 +112,7 @@ class WhaleDataModule(pl.LightningDataModule):
         """Creates the training dataloader using the
         training data parser."""
         return DataLoader(
-            self.train_ds, batch_size=self.batch_size, shuffle=True
+            self.train_ds, batch_size=self.batch_size, shuffle=False
         )
 
     def val_dataloader(self: pl.LightningDataModule) -> DataLoader:
