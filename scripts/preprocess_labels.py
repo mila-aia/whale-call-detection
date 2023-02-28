@@ -326,15 +326,15 @@ def main() -> None:
                 SNR=("SNR", "max"),
                 file_path=(
                     "file_path",
-                    lambda x: [a[:-7] + "CHANNEL" + a[-4:] for a in x][0],
+                    lambda x: list(x)[0][:-7] + "CHANNEL" + list(x)[0][-4:],
                 ),
                 time_window_start=(
                     "time_window_start",
-                    lambda x: [a for a in x][0],
+                    lambda x: list(x)[0],
                 ),
                 time_window_end=(
                     "time_window_end",
-                    lambda x: [a for a in x][0],
+                    lambda x: list(x)[0],
                 ),
                 time_call_end=("time_call_end", "min"),
                 whale_type=("whale_type", "min"),
