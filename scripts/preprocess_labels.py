@@ -144,186 +144,224 @@ def main() -> None:
         "detection_id",
     ]
 
-    # Get list of files in dataframe
-    if args.bandpass_filter == "True":
-        list_files_detailled = read_list_raw_files(
-            "/network/projects/aia/whale_call/SAC_FILES_FILT.txt"
-        )
-    else:
-        list_files_detailled = read_list_raw_files(
-            "/network/projects/aia/whale_call/SAC_FILES_RAW.txt"
-        )
+    for bandpass_filter in ["True", "False"]:
 
-    # Drop files
-    list_files_detailled["file"] = list_files_detailled["file_path"].apply(
-        lambda x: x.split("/")[-1]
-    )
-    print("Number of raw data files:", list_files_detailled.shape[0])
-
-    # Issues
-    npts_data_issues = (
-        pd.read_csv(
-            "/network/projects/aia/whale_call/ISSUES/npts_data_issues.csv"
-        )
-        .filename.apply(lambda x: x.split("/")[-1])
-        .values
-    )
-    date_data_issues = (
-        pd.read_csv(
-            "/network/projects/aia/whale_call/ISSUES/date_data_issues.csv"
-        )
-        .filename.apply(lambda x: x.split("/")[-1])
-        .values
-    )
-
-    # Null files
-    blue_whales_prblms = pd.read_csv(
-        "/network/projects/aia/whale_call/ISSUES/bw_0_values.csv"
-    )
-    fin_whales_prblms = pd.read_csv(
-        "/network/projects/aia/whale_call/ISSUES/fw_0_values.csv"
-    )
-    list_problematics_files = np.concatenate(
-        (
-            fin_whales_prblms[
-                (fin_whales_prblms["min"] == 0)
-                & (fin_whales_prblms["max"] == 0)
-            ].filename.unique(),
-            blue_whales_prblms[
-                (blue_whales_prblms["min"] == 0)
-                & (blue_whales_prblms["max"] == 0)
-            ].filename.unique(),
-        )
-    )
-    list_problematics_files = [
-        a.split("/")[-1] for a in list_problematics_files
-    ]
-
-    # Only keep files
-    list_files_detailled = list_files_detailled[
-        (~list_files_detailled.file.isin(npts_data_issues))
-        & (~list_files_detailled.file.isin(date_data_issues))
-        & (~list_files_detailled.file.isin(list_problematics_files))
-    ]
-    print("Number of files after removal:", list_files_detailled.shape[0])
-
-    # Loop for the 2 whale types
-    for whale_type in ["bw", "fw"]:
-
-        # Get data from matlab .mat matrix
-        df_calls = pd.DataFrame(
-            mat[whale_type.upper() + "C"], columns=colnames_WC
-        )
-
-        # Load name and index of stations
-        stadir = read_stadir(
-            mat, param_data["whale_constant"][whale_type]["stadir_name"]
-        )
-
-        # Preprocess labels
-        labels = preprocess_(df_calls, stadir)
-
-        # Plot counts of calls
         print(
-            "Number of {} detections: {} | Number of {} calls: {}".format(
-                param_data["whale_constant"][whale_type]["name"],
-                labels.detection_id.nunique(),
-                param_data["whale_constant"][whale_type]["name"],
-                labels.shape[0],
+            "--------> Using filtered data: {} <--------".format(
+                bandpass_filter
             )
         )
 
-        # Add start and end time of calls
-        labels["time_call_start"] = pd.to_datetime(labels["datetime"])
-        labels["time_call_end"] = labels["time_call_start"] + timedelta(
-            seconds=param_data["whale_constant"][whale_type]["call_duration"]
-        )
-
-        # Reformat folder name
-        labels["folder_date"] = (
-            labels["date"].astype(str).apply(lambda x: "".join(x.split("-")))
-        )
-
-        # Add column with Whale type
-        labels["whale_type"] = whale_type
-
-        # Merge labels and SAC file PATHs to same dataframe
-        final_df = pd.merge(
-            labels,
-            list_files_detailled,
-            left_on=["folder_date", "station_name"],
-            right_on=["folder", "station"],
-        ).rename(
-            columns={
-                "coordinates": "component",
-                "station": "station_code",
-                "detection_id": "group_id",
-            }
-        )
-
-        # Save results to dataframe
-        if args.bandpass_filter == "True":
-            csv_name = whale_type + "_filt.csv"
-            csv_name_grouped = whale_type + "_component_grouped_filt.csv"
+        # Get list of files in dataframe
+        if bandpass_filter == "True":
+            list_files_detailled = read_list_raw_files(
+                "/network/projects/aia/whale_call/SAC_FILES_FILT.txt"
+            )
         else:
-            csv_name = whale_type + "_raw.csv"
-            csv_name_grouped = whale_type + "_component_grouped_raw.csv"
-
-        # Add random value to create start and end time of window
-        list_randoms = []
-        for _ in final_df.index:
-            rand_num = random.uniform(  # nosec
-                0,
-                param_data["whale_constant"][whale_type]["window_size"]
-                - param_data["whale_constant"][whale_type]["call_duration"],
+            list_files_detailled = read_list_raw_files(
+                "/network/projects/aia/whale_call/SAC_FILES_RAW.txt"
             )
-            list_randoms.append(rand_num)
 
-        final_df["random_t"] = list_randoms
-        final_df["time_window_start"] = final_df.apply(
-            lambda x: x.time_call_start - timedelta(seconds=x.random_t), axis=1
+        # Get only the name of the files
+        list_files_detailled["file"] = list_files_detailled["file_path"].apply(
+            lambda x: x.split("/")[-1]
         )
-        final_df["time_window_end"] = final_df[
-            "time_window_start"
-        ] + timedelta(seconds=5)
+        print("Number of raw data files:", list_files_detailled.shape[0])
 
-        grouped_df = final_df.groupby(["station_code", "time_call_start"]).agg(
-            list_components=("component", lambda x: " ".join(x)),
-            number_components=("component", "count"),
-            R=("R", "max"),
-            SNR=("SNR", "max"),
-            file_path=(
-                "file_path",
-                lambda x: [a[:-7] + "CHANNEL" + a[-4:] for a in x][0],
-            ),
-            time_window_start=(
-                "time_window_start",
-                lambda x: [a for a in x][0],
-            ),
-            time_window_end=("time_window_end", lambda x: [a for a in x][0]),
-            time_call_end=("time_call_end", "min"),
-            whale_type=("whale_type", "min"),
+        # REMOVE FILES WITH WRONG NUMBER OF PTS
+        npts_data_issues = (
+            pd.read_csv(
+                "/network/projects/aia/whale_call/ISSUES/npts_data_issues.csv"
+            )
+            .filename.apply(lambda x: x.split("/")[-1])
+            .values
+        )
+        # REMOVE FILES WITH START AND END DATE NOT THE SAME
+        date_data_issues = (
+            pd.read_csv(
+                "/network/projects/aia/whale_call/ISSUES/date_data_issues.csv"
+            )
+            .filename.apply(lambda x: x.split("/")[-1])
+            .values
         )
 
-        grouped_df.to_csv(
-            labels_output / whale_type.upper() / csv_name_grouped, index=False
+        # REMOVE FILES WITH NULL VALUES
+        blue_whales_prblms = pd.read_csv(
+            "/network/projects/aia/whale_call/ISSUES/bw_0_values.csv"
+        )
+        fin_whales_prblms = pd.read_csv(
+            "/network/projects/aia/whale_call/ISSUES/fw_0_values.csv"
         )
 
-        final_df[
-            [
-                "file_path",
-                "time_window_start",
-                "time_window_end",
-                "time_call_start",
-                "time_call_end",
-                "R",
-                "SNR",
-                "group_id",
-                "station_code",
-                "whale_type",
-                "component",
+        list_problematics_files = np.concatenate(
+            (
+                fin_whales_prblms[
+                    (fin_whales_prblms["min"] == 0)
+                    & (fin_whales_prblms["max"] == 0)
+                ].filename.unique(),
+                blue_whales_prblms[
+                    (blue_whales_prblms["min"] == 0)
+                    & (blue_whales_prblms["max"] == 0)
+                ].filename.unique(),
+            )
+        )
+        list_problematics_files = [
+            a.split("/")[-1] for a in list_problematics_files
+        ]
+
+        # Only keep files
+        list_files_detailled = list_files_detailled[
+            (~list_files_detailled.file.isin(npts_data_issues))
+            & (~list_files_detailled.file.isin(date_data_issues))
+            & (~list_files_detailled.file.isin(list_problematics_files))
+        ]
+        print("Number of files after removal:", list_files_detailled.shape[0])
+
+        # Loop for the 2 whale types
+        for whale_type in ["bw", "fw"]:
+
+            # Get data from matlab .mat matrix
+            df_calls = pd.DataFrame(
+                mat[whale_type.upper() + "C"], columns=colnames_WC
+            )
+
+            # Load name and index of stations
+            stadir = read_stadir(
+                mat, param_data["whale_constant"][whale_type]["stadir_name"]
+            )
+
+            # Preprocess labels
+            labels = preprocess_(df_calls, stadir)
+
+            # Plot counts of calls
+            print(
+                "Number of {} detections: {} | Number of {} calls: {}".format(
+                    param_data["whale_constant"][whale_type]["name"],
+                    labels.detection_id.nunique(),
+                    param_data["whale_constant"][whale_type]["name"],
+                    labels.shape[0],
+                )
+            )
+
+            # Add start and end time of calls
+            labels["time_call_start"] = pd.to_datetime(labels["datetime"])
+            labels["time_call_end"] = labels["time_call_start"] + timedelta(
+                seconds=param_data["whale_constant"][whale_type][
+                    "call_duration"
+                ]
+            )
+            # Reformat folder name
+            labels["folder_date"] = (
+                labels["date"]
+                .astype(str)
+                .apply(lambda x: "".join(x.split("-")))
+            )
+
+            # Add column with Whale type
+            labels["whale_type"] = whale_type
+
+            # Merge labels and SAC file PATHs to same dataframe
+            final_df = pd.merge(
+                labels,
+                list_files_detailled,
+                left_on=["folder_date", "station_name"],
+                right_on=["folder", "station"],
+            ).rename(
+                columns={
+                    "coordinates": "component",
+                    "station": "station_code",
+                    "detection_id": "group_id",
+                }
+            )
+
+            # Save results to dataframe
+            if bandpass_filter == "True":
+                csv_name = whale_type + "_filt.csv"
+                csv_name_grouped = whale_type + "_component_grouped_filt.csv"
+            else:
+                csv_name = whale_type + "_raw.csv"
+                csv_name_grouped = whale_type + "_component_grouped_raw.csv"
+
+            # Add random value to create start and end time of window
+            list_randoms = []
+            for _ in final_df.index:
+                rand_num = random.uniform(  # nosec
+                    0,
+                    param_data["whale_constant"][whale_type]["window_size"]
+                    - param_data["whale_constant"][whale_type][
+                        "call_duration"
+                    ],
+                )
+                list_randoms.append(rand_num)
+
+            final_df["random_t"] = list_randoms
+            final_df["time_window_start"] = final_df.apply(
+                lambda x: x.time_call_start - timedelta(seconds=x.random_t),
+                axis=1,
+            ).round("10ms")
+
+            final_df["time_window_end"] = final_df[
+                "time_window_start"
+            ] + timedelta(
+                seconds=param_data["whale_constant"][whale_type]["window_size"]
+            )
+
+            final_df["time_window_start_date"] = pd.to_datetime(
+                final_df["time_window_start"]
+            ).dt.date
+            final_df["time_window_end_date"] = pd.to_datetime(
+                final_df["time_window_end"]
+            ).dt.date
+            final_df = final_df[
+                final_df.time_window_start_date
+                == final_df.time_window_end_date
             ]
-        ].to_csv(labels_output / whale_type.upper() / csv_name, index=False)
+
+            grouped_df = final_df.groupby(
+                ["station_code", "time_call_start"]
+            ).agg(
+                list_components=("component", lambda x: " ".join(x)),
+                number_components=("component", "count"),
+                R=("R", "max"),
+                SNR=("SNR", "max"),
+                file_path=(
+                    "file_path",
+                    lambda x: [a[:-7] + "CHANNEL" + a[-4:] for a in x][0],
+                ),
+                time_window_start=(
+                    "time_window_start",
+                    lambda x: [a for a in x][0],
+                ),
+                time_window_end=(
+                    "time_window_end",
+                    lambda x: [a for a in x][0],
+                ),
+                time_call_end=("time_call_end", "min"),
+                whale_type=("whale_type", "min"),
+            )
+
+            grouped_df.to_csv(
+                labels_output / whale_type.upper() / csv_name_grouped,
+                index=False,
+            )
+
+            final_df[
+                [
+                    "file_path",
+                    "time_window_start",
+                    "time_window_end",
+                    "time_call_start",
+                    "time_call_end",
+                    "R",
+                    "SNR",
+                    "group_id",
+                    "station_code",
+                    "whale_type",
+                    "component",
+                ]
+            ].to_csv(
+                labels_output / whale_type.upper() / csv_name, index=False
+            )
 
 
 def parse_args() -> Namespace:
@@ -331,13 +369,6 @@ def parse_args() -> Namespace:
     description = "Script for preprocessing the labels coming from .mat matrix"
     arg_parser = ArgumentParser(
         description=description, formatter_class=ArgumentDefaultsHelpFormatter
-    )
-
-    arg_parser.add_argument(
-        "--bandpass_filter",
-        default="True",
-        type=str,
-        help="True if you want to use data with applied bandpass filter",
     )
 
     arg_parser.add_argument(
