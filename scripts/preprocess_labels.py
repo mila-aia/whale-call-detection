@@ -107,6 +107,75 @@ def read_list_raw_files(sac_file_path: str) -> pd.DataFrame:
     return list_files_detailled
 
 
+def pass_checks(list_files: pd.DataFrame) -> pd.DataFrame:
+
+    # Load dataframe containing all statistics
+    stats_df = pd.read_csv(
+        "/network/projects/aia/whale_call/ISSUES/file_stats.csv"
+    )
+
+    # Reformat data
+    stats_df["starttime"] = pd.to_datetime(
+        stats_df["starttime"]
+    ).dt.tz_localize(None)
+    stats_df["endtime"] = pd.to_datetime(stats_df["endtime"]).dt.tz_localize(
+        None
+    )
+    stats_df["file_date"] = pd.to_datetime(
+        stats_df["file_date"]
+    ).dt.tz_localize(None)
+    stats_df["filepath_raw"] = stats_df["filepath"]
+    stats_df["filepath_filt"] = stats_df["filepath"].replace(
+        {"RAW": "FILT"}, regex=True
+    )
+
+    # REMOVE FILES WITH WRONG NUMBER OF PTS
+    files_npts = stats_df[
+        ~stats_df.npts.isin([9000201, 8640000])
+    ].filename.values
+
+    # REMOVE FILES WITH START AND END DATE NOT THE SAME
+    files_wrong_dates = stats_df[
+        (stats_df.file_date > stats_df.endtime)
+        | (stats_df.file_date < stats_df.starttime)
+    ].filename.values
+
+    # REMOVE FILES WITH NULL VALUES
+    blue_whales_prblms = pd.read_csv(
+        "/network/projects/aia/whale_call/ISSUES/bw_0_values.csv"
+    )
+    fin_whales_prblms = pd.read_csv(
+        "/network/projects/aia/whale_call/ISSUES/fw_0_values.csv"
+    )
+
+    list_problematics_files = np.concatenate(
+        (
+            fin_whales_prblms[
+                (fin_whales_prblms["min"] == 0)
+                & (fin_whales_prblms["max"] == 0)
+            ].filename.unique(),
+            blue_whales_prblms[
+                (blue_whales_prblms["min"] == 0)
+                & (blue_whales_prblms["max"] == 0)
+            ].filename.unique(),
+        )
+    )
+    list_problematics_files = [
+        a.split("/")[-1] for a in list_problematics_files
+    ]
+
+    # Only keep files
+    list_files = list_files[
+        (~list_files.file.isin(files_npts))
+        & (~list_files.file.isin(files_wrong_dates))
+        & (~list_files.file.isin(list_problematics_files))
+    ]
+
+    print("Number of files after removal:", list_files.shape[0])
+
+    return list_files
+
+
 def main() -> None:
     """ """
 
@@ -166,56 +235,9 @@ def main() -> None:
         list_files_detailled["file"] = list_files_detailled["file_path"].apply(
             lambda x: x.split("/")[-1]
         )
-        print("Number of raw data files:", list_files_detailled.shape[0])
+        print("Original # of raw data files:", list_files_detailled.shape[0])
 
-        # REMOVE FILES WITH WRONG NUMBER OF PTS
-        npts_data_issues = (
-            pd.read_csv(
-                "/network/projects/aia/whale_call/ISSUES/npts_data_issues.csv"
-            )
-            .filename.apply(lambda x: x.split("/")[-1])
-            .values
-        )
-        # REMOVE FILES WITH START AND END DATE NOT THE SAME
-        date_data_issues = (
-            pd.read_csv(
-                "/network/projects/aia/whale_call/ISSUES/date_data_issues.csv"
-            )
-            .filename.apply(lambda x: x.split("/")[-1])
-            .values
-        )
-
-        # REMOVE FILES WITH NULL VALUES
-        blue_whales_prblms = pd.read_csv(
-            "/network/projects/aia/whale_call/ISSUES/bw_0_values.csv"
-        )
-        fin_whales_prblms = pd.read_csv(
-            "/network/projects/aia/whale_call/ISSUES/fw_0_values.csv"
-        )
-
-        list_problematics_files = np.concatenate(
-            (
-                fin_whales_prblms[
-                    (fin_whales_prblms["min"] == 0)
-                    & (fin_whales_prblms["max"] == 0)
-                ].filename.unique(),
-                blue_whales_prblms[
-                    (blue_whales_prblms["min"] == 0)
-                    & (blue_whales_prblms["max"] == 0)
-                ].filename.unique(),
-            )
-        )
-        list_problematics_files = [
-            a.split("/")[-1] for a in list_problematics_files
-        ]
-
-        # Only keep files
-        list_files_detailled = list_files_detailled[
-            (~list_files_detailled.file.isin(npts_data_issues))
-            & (~list_files_detailled.file.isin(date_data_issues))
-            & (~list_files_detailled.file.isin(list_problematics_files))
-        ]
-        print("Number of files after removal:", list_files_detailled.shape[0])
+        list_files = pass_checks(list_files_detailled)
 
         # Loop for the 2 whale types
         for whale_type in ["bw", "fw"]:
@@ -263,7 +285,7 @@ def main() -> None:
             # Merge labels and SAC file PATHs to same dataframe
             final_df = pd.merge(
                 labels,
-                list_files_detailled,
+                list_files,
                 left_on=["folder_date", "station_name"],
                 right_on=["folder", "station"],
             ).rename(
@@ -306,17 +328,61 @@ def main() -> None:
                 seconds=param_data["whale_constant"][whale_type]["window_size"]
             )
 
+            # Convert time to pd.datetime.dt.date
             final_df["time_window_start_date"] = pd.to_datetime(
                 final_df["time_window_start"]
             ).dt.date
             final_df["time_window_end_date"] = pd.to_datetime(
                 final_df["time_window_end"]
             ).dt.date
-            final_df = final_df[
-                final_df.time_window_start_date
-                == final_df.time_window_end_date
-            ]
 
+            # Check to see if window date start and end on same day
+            # Load dataset with stats per file
+            stats_df = pd.read_csv(
+                "/network/projects/aia/whale_call/ISSUES/file_stats.csv"
+            )
+            # Convert datetimes
+            stats_df["starttime"] = pd.to_datetime(
+                stats_df["starttime"]
+            ).dt.tz_localize(None)
+            stats_df["endtime"] = pd.to_datetime(
+                stats_df["endtime"]
+            ).dt.tz_localize(None)
+            stats_df["file_date"] = pd.to_datetime(
+                stats_df["file_date"]
+            ).dt.tz_localize(None)
+            if bandpass_filter == "True":
+                stats_df["filepath"] = stats_df["filepath"].replace(
+                    {"RAW": "FILT_10_32"}, regex=True
+                )
+            # Merge stat df and df
+            merged = final_df.merge(
+                stats_df, left_on="file_path", right_on="filepath"
+            )
+            # Convert time windows
+            merged["time_window_start"] = pd.to_datetime(
+                merged["time_window_start"]
+            )
+            merged["time_window_end"] = pd.to_datetime(
+                merged["time_window_end"]
+            )
+            # Drop sample where
+            # [time_window_end > endtime]
+            # or [time_window_start < starttime]
+            # or time_window_start_date != merged.time_window_end_date
+            final_df.drop(
+                index=merged[
+                    (merged["time_window_end"] > merged["endtime"])
+                    | (merged["time_window_start"] < merged["starttime"])
+                    | (
+                        merged.time_window_start_date
+                        != merged.time_window_end_date
+                    )
+                ].index.tolist(),
+                inplace=True,
+            )
+
+            # Group by and Save datasets
             grouped_df = final_df.groupby(
                 ["station_code", "time_call_start"]
             ).agg(
