@@ -109,7 +109,8 @@ class UNet(pl.LightningModule):
         n_classes: int,
         bilinear: bool = False,
     ) -> None:
-        super(UNet, self).__init__()
+        super().__init__()
+        self.save_hyperparameters()
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.bilinear = bilinear
