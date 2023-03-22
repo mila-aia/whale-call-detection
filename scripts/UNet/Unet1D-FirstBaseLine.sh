@@ -12,4 +12,4 @@
 module --quiet load anaconda/3
 conda activate whale
 
-python whale/train.py fit --config experiments/unet/unet-1d.yaml
+python whale/main.py fit --config experiments/unet/unet-1d.yaml

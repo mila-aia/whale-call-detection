@@ -79,5 +79,5 @@ optional arguments:
 
 To train a 1D UNet model on a subset of dataset for testing purpose:
 ```
-python whale/train.py fit --config experiments/mini-test.yaml
+python whale/main.py fit --config experiments/mini-test.yaml
 ```

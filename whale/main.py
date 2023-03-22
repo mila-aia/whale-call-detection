@@ -1,25 +1,23 @@
 #!/usr/bin/env python
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter, Namespace
+"""
+Authors
+ * Ge Li and Basil Roth 2023
+"""
+
+import logging
+from pytorch_lightning.cli import LightningCLI
+from pytorch_lightning import seed_everything
+from whale.utils.callbacks import LogConfigCallback
+
+seed_everything(42, workers=True)
+logger = logging.getLogger(__name__)
 
 
 def main() -> None:
     """Main entry point of the program."""
-    parse_args()
-
-
-def parse_args() -> Namespace:
-    description = "Whalle Call Detection"
-    arg_parser = ArgumentParser(
-        description=description, formatter_class=ArgumentDefaultsHelpFormatter
+    LightningCLI(
+        save_config_overwrite=True, save_config_callback=LogConfigCallback
     )
-    arg_parser.add_argument(
-        "--input-file",
-        default="data/raw/enron/emails.csv",
-        type=str,
-        help="path to the input CSV file",
-    )
-
-    return arg_parser.parse_args()
 
 
 if __name__ == "__main__":
