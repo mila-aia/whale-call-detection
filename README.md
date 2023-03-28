@@ -67,8 +67,6 @@ Script for preprocessing the labels coming from .mat matrix
 
 optional arguments:
   -h, --help            show this help message and exit
-  --bandpass_filter BANDPASS_FILTER
-                        True if you want to use data with applied bandpass filter (default: True)
   --input_file INPUT_FILE
                         path to the input file (default: /network/projects/aia/whale_call/MATLAB_OUTPUT/WhaleDetectionsLSZ_new.mat)
 ```
