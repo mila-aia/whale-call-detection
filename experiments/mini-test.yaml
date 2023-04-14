@@ -10,13 +10,13 @@ trainer:
     - class_path: whale.utils.loggers.CustomMLFLogger
       init_args:
         experiment_name: "unet_a"
-        run_name: "test"
+        run_name: "mini-test"
         save_dir: "./mlruns"
 
   callbacks:
   - class_path: pytorch_lightning.callbacks.ModelCheckpoint
     init_args:
-      dirpath: "./ckpts/unet"
+      dirpath: "./ckpts/unet/mini-test"
       monitor: "overall_val_acc"
       mode: "max"
       auto_insert_metric_name: True
@@ -25,7 +25,7 @@ trainer:
 data:
   class_path: whale.data_io.data_loader.WhaleDataModule
   init_args:
-    data_dir: /network/projects/aia/whale_call/LABELS/mini_data
+    data_dir: /network/projects/aia/whale_call/LABELS/FWC_1CH_mini
     batch_size: 32
 
 model:

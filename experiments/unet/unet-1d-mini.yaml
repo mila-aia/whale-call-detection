@@ -16,7 +16,7 @@ trainer:
   callbacks:
   - class_path: pytorch_lightning.callbacks.ModelCheckpoint
     init_args:
-      dirpath: "/network/projects/aia/whale_call/mlruns/ckpts/unet"
+      dirpath: "/network/projects/aia/whale_call/mlruns/ckpts/unet/mini-run"
       monitor: "overall_val_acc"
       mode: "max"
       auto_insert_metric_name: True
