@@ -4,8 +4,8 @@
 #SBATCH --mem=8G
 #SBATCH --gres gpu:1
 #SBATCH --partition=main
-#SBATCH --output=/network/projects/aia//whale_call/LOGS/UNet1D-%j.out
-#SBATCH --error=/network/projects/aia//whale_call/LOGS/UNet1D-%j.err
+#SBATCH --output=/network/projects/aia/whale_call/LOGS/UNet1D-mini-%j.out
+#SBATCH --error=/network/projects/aia/whale_call/LOGS/UNet1D-mini-%j.err
 #SBATCH --mail-user=ge.li@mila.quebec
 #SBATCH --mail-type=ALL
 
