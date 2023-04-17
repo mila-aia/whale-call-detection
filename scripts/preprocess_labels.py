@@ -266,12 +266,21 @@ def main() -> None:
             )
 
             # Add start and end time of calls
-            labels["time_call_start"] = pd.to_datetime(labels["datetime"])
-            labels["time_call_end"] = labels["time_call_start"] + timedelta(
+            labels["time_R_max"] = pd.to_datetime(labels["datetime"])
+
+            labels["time_call_start"] = labels["time_R_max"] - timedelta(
                 seconds=param_data["whale_constant"][whale_type][
                     "call_duration"
                 ]
+                / 2
             )
+            labels["time_call_end"] = labels["time_R_max"] + timedelta(
+                seconds=param_data["whale_constant"][whale_type][
+                    "call_duration"
+                ]
+                / 2
+            )
+
             # Reformat folder name
             labels["folder_date"] = (
                 labels["date"]
@@ -416,6 +425,7 @@ def main() -> None:
                     "file_path",
                     "time_window_start",
                     "time_window_end",
+                    "time_R_max",
                     "time_call_start",
                     "time_call_end",
                     "R",
