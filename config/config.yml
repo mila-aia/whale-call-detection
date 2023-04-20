@@ -2,7 +2,7 @@ whale_constant:
   fw:
     name: Fin Whale
     window: 120
-    window_size: 5
+    window_size: 2
     high_cut_bandpass: 32
     low_cut_bandpass: 12
     call_duration: 1
