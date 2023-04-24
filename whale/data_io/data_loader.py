@@ -11,6 +11,9 @@ from torch.utils.data import Dataset, DataLoader
 class WhaleDataset(Dataset):
     """Dataset class for iterating over the data."""
 
+    # labels: pd.DataFrame
+    # fs: float
+    # normalize: bool
     def __init__(
         self: Dataset, labels_file: str, fs: int = 100, normalize: bool = True
     ) -> None:
@@ -21,6 +24,7 @@ class WhaleDataset(Dataset):
             normalize (bool): Normalize the waveform into [0,1].
         """
         super().__init__()
+
         self.labels = pd.read_csv(labels_file)
         self.fs = fs
         self.normalize = normalize
@@ -38,6 +42,7 @@ class WhaleDataset(Dataset):
             index (int): Get index item from the dataset.
         """
         sac_path = self.labels["file_path"][index]
+        meta_data = dict(self.labels.iloc[index])
         start_time = obspy.UTCDateTime(self.labels["time_window_start"][index])
         end_time = obspy.UTCDateTime(self.labels["time_window_end"][index])
         tr = obspy.read(sac_path, starttime=start_time, endtime=end_time)
@@ -68,6 +73,7 @@ class WhaleDataset(Dataset):
             "data_index": index,
             "sig": input_example,
             "target": target_example,
+            "meta_data": meta_data,
         }
 
 
@@ -112,18 +118,18 @@ class WhaleDataModule(pl.LightningDataModule):
         """Creates the training dataloader using the
         training data parser."""
         return DataLoader(
-            self.train_ds, batch_size=self.batch_size, shuffle=False
+            self.train_ds, batch_size=self.batch_size, shuffle=True
         )
 
     def val_dataloader(self: pl.LightningDataModule) -> DataLoader:
         """Creates the validation dataloader using
         the validation data parser."""
         return DataLoader(
-            self.valid_ds, batch_size=self.batch_size, shuffle=False
+            self.valid_ds, batch_size=self.batch_size, shuffle=True
         )
 
     def test_dataloader(self: pl.LightningDataModule) -> DataLoader:
         """Creates the testing dataloader using the testing data parser."""
         return DataLoader(
-            self.test_ds, batch_size=self.batch_size, shuffle=False
+            self.test_ds, batch_size=self.batch_size, shuffle=True
         )

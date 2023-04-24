@@ -1,5 +1,5 @@
 trainer:
-  max_epochs: 5
+  max_epochs: 30
   accelerator: "auto"
   move_metrics_to_cpu: True
   log_every_n_steps: 5
@@ -9,14 +9,14 @@ trainer:
   logger: 
     - class_path: whale.utils.loggers.CustomMLFLogger
       init_args:
-        experiment_name: "unet_a"
-        run_name: "mini-test"
-        save_dir: "./mlruns"
+        experiment_name: "unet"
+        run_name: "unet-1d-mini-run"
+        save_dir: "/network/projects/aia/whale_call/mlruns"
 
   callbacks:
   - class_path: pytorch_lightning.callbacks.ModelCheckpoint
     init_args:
-      dirpath: "./ckpts/unet/mini-test"
+      dirpath: "/network/projects/aia/whale_call/mlruns/ckpts/unet/mini-run"
       monitor: "overall_val_acc"
       mode: "max"
       auto_insert_metric_name: True
@@ -37,9 +37,14 @@ model:
 optimizer:
   class_path: torch.optim.AdamW
   init_args:
-    lr: 0.0001
+    lr: 0.001
     betas:
     - 0.9
     - 0.999
     eps: 1.0e-09
     weight_decay: 0.0002
+
+lr_scheduler:
+  class_path: torch.optim.lr_scheduler.ExponentialLR
+  init_args:
+    gamma: 0.1
