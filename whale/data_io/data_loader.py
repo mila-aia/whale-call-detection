@@ -121,8 +121,7 @@ class WhaleDatasetSpec(Dataset):
         tr = obspy.read(sac_path, starttime=start_time, endtime=end_time)
         input_waveform = tr[0].data
 
-        # Calculate spectrogram with a shape of (n_freq, n_time)
-        # which is ()
+        # Calculate spectrogram with a shape of (n_freq, n_time).
         input_spec, _, _ = cal_spectrogram(
             input_waveform, samp_rate=self.fs, per_lap=0.9, wlen=0.5, mult=4
         )
