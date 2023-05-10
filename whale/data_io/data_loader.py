@@ -138,19 +138,20 @@ class WhaleDatasetSpec(Dataset):
         target_time_R_max = time_R_max - start_time
 
         input_waveform = np.expand_dims(input_waveform, axis=0)
-        input_spec = np.expand_dims(
-            input_spec, axis=0
-        )  # add channel dimension
+        input_spec = input_spec.T  # transpose to (n_time, n_freq)
+        # input_spec = np.expand_dims(
+        #     input_spec.T, axis=0
+        # )  # transpose to (n_time, n_freq) and add batch dimension
 
-        input_waveform = torch.from_numpy(input_waveform)
-        input_spec = torch.from_numpy(input_spec)
+        input_waveform = torch.from_numpy(input_waveform).float()
+        input_spec = torch.from_numpy(input_spec).float()
 
         return {
             "data_index": index,
             "sig": input_waveform,
             "spec": input_spec,
-            "time": target_time_R_max,
-            "label": target_label,
+            "target_time": target_time_R_max,
+            "target_label": target_label,
             "meta_data": meta_data,
         }
 
