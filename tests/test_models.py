@@ -1,5 +1,5 @@
 import torch
-from whale.models import UNet
+from whale.models import UNet, LSTM
 
 
 def test_unet() -> None:
@@ -16,3 +16,17 @@ def test_unet() -> None:
 
     assert pred.shape == (1, 2, 501)
     assert type(loss) == torch.Tensor
+
+
+def test_lstm() -> None:
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    model = LSTM(input_dim=4, hidden_dim=6)
+    model = model.to(device)
+
+    sig = torch.zeros([5, 2, 4]).to(device)
+    class_logits, reg_out = model.forward(sig)
+
+    assert class_logits.shape == (5, 2)
+    assert reg_out.shape == (5, 1)
