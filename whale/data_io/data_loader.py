@@ -135,13 +135,12 @@ class WhaleDatasetSpec(Dataset):
             input_waveform = (input_waveform - min_val) / (max_val - min_val)
 
         target_label = 0 if call_type == "noise" else 1
+
         target_time_R_max = time_R_max - start_time
+        target_time_R_max = np.float32(target_time_R_max)
 
         input_waveform = np.expand_dims(input_waveform, axis=0)
         input_spec = input_spec.T  # transpose to (n_time, n_freq)
-        # input_spec = np.expand_dims(
-        #     input_spec.T, axis=0
-        # )  # transpose to (n_time, n_freq) and add batch dimension
 
         input_waveform = torch.from_numpy(input_waveform).float()
         input_spec = torch.from_numpy(input_spec).float()
