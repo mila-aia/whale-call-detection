@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import pytorch_lightning as pl
 import torchmetrics
-from typing import Any
+from typing import Any, Dict
 
 
 # Add an pytorch LSTM model
@@ -46,6 +46,9 @@ class LSTM(pl.LightningModule):
         return None
 
     def forward(self: pl.LightningModule, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass of the model.
+        """
 
         # Forward propagate LSTM
         out, _ = self.lstm(x)
@@ -64,7 +67,7 @@ class LSTM(pl.LightningModule):
         self,
         predictions: torch.tensor,
         targets: torch.tensor,
-    ) -> int:
+    ) -> Dict[str, Any]:
         """Computes the metrics.
         Parameters
         ----------
@@ -77,11 +80,47 @@ class LSTM(pl.LightningModule):
         torch.Tensor
             Segmentation mask.
         """
-        acc = torchmetrics.Accuracy(
+        acc_scorer = torchmetrics.Accuracy(
             task="multiclass", num_classes=self.num_classes
         ).to(self.device)
+        accuracy = acc_scorer(predictions, targets)
 
-        return acc(predictions, targets)
+        recall_scorer = torchmetrics.Recall(
+            task="multiclass",
+            threshold=0.5,
+            average="micro",
+            num_classes=self.num_classes,
+        ).to(self.device)
+        recall = recall_scorer(predictions, targets)
+
+        prec_scorer = torchmetrics.Precision(
+            task="multiclass",
+            threshold=0.5,
+            average="micro",
+            num_classes=self.num_classes,
+        ).to(self.device)
+        precision = prec_scorer(predictions, targets)
+
+        f1_scorer = torchmetrics.F1Score(
+            task="multiclass",
+            threshold=0.5,
+            average="micro",
+            num_classes=self.num_classes,
+        ).to(self.device)
+        f1_score = f1_scorer(predictions, targets)
+
+        if f1_score != 2 * (precision * recall) / (precision + recall):
+            raise ValueError("F1 score inconsistent with precision and recall")
+
+        metrics_dict = dict(
+            {
+                "acc": accuracy,
+                "recall": recall,
+                "prec": precision,
+                "f1": f1_score,
+            }
+        )
+        return metrics_dict
 
     def training_step(
         self: pl.LightningModule, batch: torch.Tensor, batch_idx: torch.Tensor
@@ -98,20 +137,24 @@ class LSTM(pl.LightningModule):
         r_time = batch["target_time"]
         label = batch["target_label"]
         class_logits, reg_out = self.forward(spec)
-
         loss_cls = self.class_loss_fn(class_logits, label)
         loss_reg = self.reg_loss_fn(reg_out, r_time)
         loss = loss_cls + loss_reg
 
+        output_dict = {}
+        output_dict["loss"] = loss
         self.log("train_loss", loss)
         self.log("train_loss_cls", loss_cls)
         self.log("train_loss_reg", loss_reg)
 
         preds = torch.softmax(class_logits, dim=1)
+        train_metrics = self.compute_metrics(preds, label)
 
-        acc = self.compute_metrics(preds, label)
+        for key, value in train_metrics.items():
+            self.log(f"train_{key}", value)
+            output_dict[f"train_{key}"] = value
 
-        return {"loss": loss, "acc": acc}
+        return output_dict
 
     def training_epoch_end(
         self: pl.LightningModule, training_step_outputs: list[dict]
@@ -125,33 +168,47 @@ class LSTM(pl.LightningModule):
         """
         for training_step_output in training_step_outputs:
             train_loss_mean = training_step_output["loss"].mean()
+            train_f1_mean = training_step_output["f1"].mean()
             train_acc_mean = training_step_output["acc"].mean()
 
         self.log("overall_train_loss", train_loss_mean)
+        self.log("overall_train_f1", train_f1_mean)
         self.log("overall_train_acc", train_acc_mean)
 
     def validation_step(
         self: pl.LightningModule, batch: torch.Tensor, batch_idx: torch.Tensor
     ) -> dict:
-        """Runs a prediction step for validation, returning the loss.
+        """Runs a prediction step for validation, returning the loss and metrics.
         Parameters
         ----------
         Returns
         -------
-        torch.Tensor
-            loss produced by the loss function.
+        Dict[str, torch.Tensor]
+            loss and metrics for the validation step.
         """
-        sig = batch["sig"]
-        target = batch["target"]
-        logits = self.forward(sig)
-        loss = self.loss_fn(logits, target)
-        preds = torch.softmax(logits, dim=1)
-        acc = self.compute_metrics(preds, target)
+        spec = batch["spec"]
+        r_time = batch["target_time"]
+        label = batch["target_label"]
+        class_logits, reg_out = self.forward(spec)
 
+        loss_cls = self.class_loss_fn(class_logits, label)
+        loss_reg = self.reg_loss_fn(reg_out, r_time)
+        loss = loss_cls + loss_reg
+
+        output_dict = {}
+        output_dict["val_loss"] = loss
         self.log("val_loss", loss)
-        self.log("val_acc", acc)
+        self.log("val_loss_cls", loss_cls)
+        self.log("val_loss_reg", loss_reg)
 
-        return {"val_loss": loss, "val_acc": acc}
+        preds = torch.softmax(class_logits, dim=1)
+        train_metrics = self.compute_metrics(preds, label)
+
+        for key, value in train_metrics.items():
+            self.log(f"val_{key}", value)
+            output_dict[f"val_{key}"] = value
+
+        return output_dict
 
     def validation_epoch_end(
         self: pl.LightningModule, validation_step_outputs: list[dict]
@@ -166,9 +223,11 @@ class LSTM(pl.LightningModule):
         for validation_step_output in validation_step_outputs:
             val_loss_mean = validation_step_output["val_loss"].mean()
             val_acc_mean = validation_step_output["val_acc"].mean()
+            val_f1_mean = validation_step_output["val_f1"].mean()
 
         self.log("overall_val_loss", val_loss_mean)
         self.log("overall_val_acc", val_acc_mean)
+        self.log("overall_val_f1", val_f1_mean)
 
     def test_step(
         self: pl.LightningModule, batch: torch.Tensor, batch_idx: torch.Tensor
@@ -181,17 +240,29 @@ class LSTM(pl.LightningModule):
         torch.Tensor
             loss produced by the loss function.
         """
-        sig = batch["sig"]
-        target = batch["target"]
-        logits = self.forward(sig)
-        loss = self.loss_fn(logits, target)
-        preds = torch.softmax(logits, dim=1)
-        acc = self.compute_metrics(preds, target)
+        spec = batch["spec"]
+        r_time = batch["target_time"]
+        label = batch["target_label"]
+        class_logits, reg_out = self.forward(spec)
 
+        loss_cls = self.class_loss_fn(class_logits, label)
+        loss_reg = self.reg_loss_fn(reg_out, r_time)
+        loss = loss_cls + loss_reg
+
+        output_dict = {}
+        output_dict["loss"] = loss
         self.log("test_loss", loss)
-        self.log("test_acc", acc)
+        self.log("test_loss_cls", loss_cls)
+        self.log("test_loss_reg", loss_reg)
 
-        return {"test_loss": loss, "test_acc": acc}
+        preds = torch.softmax(class_logits, dim=1)
+        train_metrics = self.compute_metrics(preds, label)
+
+        for key, value in train_metrics.items():
+            self.log(f"test_{key}", value)
+            output_dict[f"test_{key}"] = value
+
+        return output_dict
 
     def configure_optimizers(self: pl.LightningModule) -> Any:
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
