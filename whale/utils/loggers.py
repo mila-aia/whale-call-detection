@@ -15,6 +15,7 @@ class CustomMLFLogger(MLFlowLogger):
         prefix: str = "",
         artifact_location: str = None,
         run_id: str = None,
+        log_model: bool = True,
     ) -> None:
         """ """
         if tracking_uri is None:
@@ -25,12 +26,8 @@ class CustomMLFLogger(MLFlowLogger):
             tracking_uri,
             tags,
             save_dir,
+            log_model,
             prefix,
             artifact_location,
             run_id,
-        )
-
-    def log_model(self, local_path: str, file_name: str) -> None:
-        self.experiment.log_artifact(
-            run_id=self.run_id, local_path=local_path, artifact_path=file_name
         )
