@@ -233,11 +233,11 @@ class WhaleDataModule(pl.LightningDataModule):
         """Creates the validation dataloader using
         the validation data parser."""
         return DataLoader(
-            self.valid_ds, batch_size=self.batch_size, shuffle=True
+            self.valid_ds, batch_size=self.batch_size, shuffle=False
         )
 
     def test_dataloader(self: pl.LightningDataModule) -> DataLoader:
         """Creates the testing dataloader using the testing data parser."""
         return DataLoader(
-            self.test_ds, batch_size=self.batch_size, shuffle=True
+            self.test_ds, batch_size=self.batch_size, shuffle=False
         )
