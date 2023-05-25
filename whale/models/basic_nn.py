@@ -168,8 +168,8 @@ class LSTM(pl.LightningModule):
         """
         for training_step_output in training_step_outputs:
             train_loss_mean = training_step_output["loss"].mean()
-            train_f1_mean = training_step_output["f1"].mean()
-            train_acc_mean = training_step_output["acc"].mean()
+            train_f1_mean = training_step_output["train_f1"].mean()
+            train_acc_mean = training_step_output["train_acc"].mean()
 
         self.log("overall_train_loss", train_loss_mean)
         self.log("overall_train_f1", train_f1_mean)
@@ -202,9 +202,9 @@ class LSTM(pl.LightningModule):
         self.log("val_loss_reg", loss_reg)
 
         preds = torch.softmax(class_logits, dim=1)
-        train_metrics = self.compute_metrics(preds, label)
+        val_metrics = self.compute_metrics(preds, label)
 
-        for key, value in train_metrics.items():
+        for key, value in val_metrics.items():
             self.log(f"val_{key}", value)
             output_dict[f"val_{key}"] = value
 
