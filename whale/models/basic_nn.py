@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import pytorch_lightning as pl
 import torchmetrics
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 
 class LSTM(pl.LightningModule):
@@ -14,6 +14,7 @@ class LSTM(pl.LightningModule):
         dropout: float = 0.5,
         num_classes: int = 2,
         bidirectional: bool = False,
+        reg_loss_weight: float = 0.5,
     ) -> None:
 
         super(LSTM, self).__init__()
@@ -25,6 +26,7 @@ class LSTM(pl.LightningModule):
         self.dropout = nn.Dropout(dropout)
         self.num_classes = num_classes
         self.bidirectional = bidirectional
+        self.reg_loss_weight = reg_loss_weight
 
         self.lstm = nn.LSTM(
             input_size=self.input_dim,
@@ -61,6 +63,49 @@ class LSTM(pl.LightningModule):
         reg_out = self.hidden2time(out)  # (batch_size, 1)
 
         return class_logits, reg_out
+
+    def compute_loss(
+        self,
+        logits_pred: torch.tensor,
+        time_pred: torch.tensor,
+        label: torch.tensor,
+        r_time: torch.tensor,
+        w: float = 0.5,
+    ) -> Tuple[torch.tensor, torch.tensor, torch.tensor]:
+        """Computes the loss.
+        Parameters
+        ----------
+        logits_pred : torch.Tensor
+            Predicted class unormalized logits.
+        time_pred : torch.Tensor
+            Predicted time.
+        label : torch.Tensor
+            Ground Truth Labels.
+        r_time : torch.Tensor
+            Ground Truth Time.
+        w : float, optional
+            Weight for the regression loss, by default 0.5.
+        Returns
+        -------
+        Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+            Tuple of total loss, classification loss and regression loss.
+
+        """
+        loss_cls = self.class_loss_fn(logits_pred, label)
+
+        # write weighted MSE loss, where the weight is the true class label
+        # TODO: this only works for binary classification
+        def weighted_mse_loss(
+            input: torch.Tensor, target: torch.Tensor, weight: float
+        ) -> torch.Tensor:
+            return (weight * (input - target) ** 2).mean()
+
+        loss_reg = weighted_mse_loss(time_pred, r_time, label)
+        # loss_reg = self.reg_loss_fn(time_pred, r_time)
+
+        loss = loss_cls + w * loss_reg
+
+        return loss, loss_cls, loss_reg
 
     def compute_metrics(
         self,
@@ -124,9 +169,12 @@ class LSTM(pl.LightningModule):
         r_time = batch["target_time"]
         label = batch["target_label"]
         class_logits, reg_out = self.forward(spec)
-        loss_cls = self.class_loss_fn(class_logits, label)
-        loss_reg = self.reg_loss_fn(reg_out.squeeze(1), r_time)
-        loss = loss_cls + loss_reg
+        # loss_cls = self.class_loss_fn(class_logits, label)
+        # loss_reg = self.reg_loss_fn(reg_out.squeeze(1), r_time)
+        # loss = loss_cls + loss_reg
+        loss, loss_cls, loss_reg = self.compute_loss(
+            class_logits, reg_out.squeeze(1), label, r_time
+        )
 
         output_dict = {}
         output_dict["loss"] = loss
@@ -180,9 +228,12 @@ class LSTM(pl.LightningModule):
         label = batch["target_label"]
         class_logits, reg_out = self.forward(spec)
 
-        loss_cls = self.class_loss_fn(class_logits, label)
-        loss_reg = self.reg_loss_fn(reg_out.squeeze(1), r_time)
-        loss = loss_cls + loss_reg
+        # loss_cls = self.class_loss_fn(class_logits, label)
+        # loss_reg = self.reg_loss_fn(reg_out.squeeze(1), r_time)
+        # loss = loss_cls + loss_reg
+        loss, loss_cls, loss_reg = self.compute_loss(
+            class_logits, reg_out.squeeze(1), label, r_time
+        )
 
         output_dict = {}
         output_dict["val_loss"] = loss
@@ -236,9 +287,12 @@ class LSTM(pl.LightningModule):
         label = batch["target_label"]
         class_logits, reg_out = self.forward(spec)
 
-        loss_cls = self.class_loss_fn(class_logits, label)
-        loss_reg = self.reg_loss_fn(reg_out.squeeze(1), r_time)
-        loss = loss_cls + loss_reg
+        # loss_cls = self.class_loss_fn(class_logits, label)
+        # loss_reg = self.reg_loss_fn(reg_out.squeeze(1), r_time)
+        # loss = loss_cls + loss_reg
+        loss, loss_cls, loss_reg = self.compute_loss(
+            class_logits, reg_out.squeeze(1), label, r_time
+        )
 
         output_dict = {}
         output_dict["loss"] = loss
