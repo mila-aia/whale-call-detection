@@ -15,7 +15,29 @@ class LSTM(pl.LightningModule):
         num_classes: int = 2,
         bidirectional: bool = False,
         reg_loss_weight: float = 0.5,
+        lr: float = 1e-3,
     ) -> None:
+        """
+        LSTM model for whale classification and time prediction.
+        Parameters
+        ----------
+        input_dim : int, optional
+            Dimension of the input sequence to the LSTM, by default 129
+        hidden_dim : int, optional
+            Dimension of the hidden state of the LSTM, by default 128
+        num_layers : int, optional
+            Number of layers in the LSTM, by default 1
+        dropout : float, optional
+            Dropout rate, by default 0.5
+        num_classes : int, optional
+            Number of classes, by default 2
+        bidirectional : bool, optional
+            Whether the LSTM is bidirectional, by default False
+        reg_loss_weight : float, optional
+            Weight for the regression loss, by default 0.5
+        lr : float, optional
+            Learning rate, by default 1e-3
+        """
 
         super(LSTM, self).__init__()
         self.save_hyperparameters()
@@ -27,6 +49,7 @@ class LSTM(pl.LightningModule):
         self.num_classes = num_classes
         self.bidirectional = bidirectional
         self.reg_loss_weight = reg_loss_weight
+        self.lr = lr
 
         self.lstm = nn.LSTM(
             input_size=self.input_dim,
@@ -328,8 +351,13 @@ class LSTM(pl.LightningModule):
         return output_dict
 
     def configure_optimizers(self: pl.LightningModule) -> Any:
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-        return optimizer
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(
+            optimizer,
+            max_lr=self.lr,
+            total_steps=self.trainer.estimated_stepping_batches,
+        )
+        return [optimizer], [scheduler]
 
 
 if __name__ == "__main__":

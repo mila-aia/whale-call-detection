@@ -12,4 +12,17 @@
 module --quiet load anaconda/3
 conda activate whale
 
-python whale/main.py fit --config experiments/call-level-class-reg/lstm-fwc-1ch-hq.yaml
+python models/lstm.py \
+    --data-path /network/projects/aia/whale_call/LABELS/fw_HQ_filt_mixed \
+    --mlruns-dir /network/projects/aia/whale_call/mlruns \
+    --exp-name "lstm" \
+    --run-name 'baseline_run' \
+    --input-dim 129 \
+    --hidden-dim 128 \
+    --num-layers 3 \
+    --lr 0.001 \
+    --num-classes 2 \
+    --batch-size 64 \
+    --num-epochs 30 \
+    --data-type 'spec' \
+    --metric-to-optimize 'overall_val_loss' 
