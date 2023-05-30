@@ -192,9 +192,7 @@ class LSTM(pl.LightningModule):
         r_time = batch["target_time"]
         label = batch["target_label"]
         class_logits, reg_out = self.forward(spec)
-        # loss_cls = self.class_loss_fn(class_logits, label)
-        # loss_reg = self.reg_loss_fn(reg_out.squeeze(1), r_time)
-        # loss = loss_cls + loss_reg
+
         loss, loss_cls, loss_reg = self.compute_loss(
             class_logits, reg_out.squeeze(1), label, r_time
         )
@@ -224,16 +222,21 @@ class LSTM(pl.LightningModule):
             A list of training metrics\
                     produced by the training step.
         """
-        for training_step_output in training_step_outputs:
-            train_loss_mean = training_step_output["loss"].mean()
-            train_f1_macro_mean = training_step_output["train_f1_macro"].mean()
-            train_f1_micro_mean = training_step_output["train_f1_micro"].mean()
-            train_acc_mean = training_step_output["train_acc"].mean()
 
-        self.log("overall_train_loss", train_loss_mean)
-        self.log("overall_train_f1_micro", train_f1_micro_mean)
-        self.log("overall_train_f1_macro", train_f1_macro_mean)
-        self.log("overall_train_acc", train_acc_mean)
+        train_loss = []
+        train_f1_micro = []
+        train_f1_macro = []
+        train_acc = []
+        for training_step_output in training_step_outputs:
+            train_loss.append(training_step_output["loss"])
+            train_f1_micro.append(training_step_output["train_f1_micro"])
+            train_f1_macro.append(training_step_output["train_f1_macro"])
+            train_acc.append(training_step_output["train_acc"])
+
+        self.log("overall_train_loss", torch.vstack(train_loss).mean())
+        self.log("overall_train_f1_micro", torch.vstack(train_f1_micro).mean())
+        self.log("overall_train_f1_macro", torch.vstack(train_f1_macro).mean())
+        self.log("overall_train_acc", torch.vstack(train_acc).mean())
 
     def validation_step(
         self: pl.LightningModule, batch: torch.Tensor, batch_idx: torch.Tensor
@@ -251,9 +254,6 @@ class LSTM(pl.LightningModule):
         label = batch["target_label"]
         class_logits, reg_out = self.forward(spec)
 
-        # loss_cls = self.class_loss_fn(class_logits, label)
-        # loss_reg = self.reg_loss_fn(reg_out.squeeze(1), r_time)
-        # loss = loss_cls + loss_reg
         loss, loss_cls, loss_reg = self.compute_loss(
             class_logits, reg_out.squeeze(1), label, r_time
         )
@@ -283,16 +283,20 @@ class LSTM(pl.LightningModule):
             A list of validation metrics\
                     produced by the training step.
         """
+        val_loss = []
+        val_f1_micro = []
+        val_f1_macro = []
+        val_acc = []
         for validation_step_output in validation_step_outputs:
-            val_loss_mean = validation_step_output["val_loss"].mean()
-            val_acc_mean = validation_step_output["val_acc"].mean()
-            val_f1_micro_mean = validation_step_output["val_f1_micro"].mean()
-            val_f1_macro_mean = validation_step_output["val_f1_macro"].mean()
+            val_loss.append(validation_step_output["val_loss"])
+            val_f1_micro.append(validation_step_output["val_f1_micro"])
+            val_f1_macro.append(validation_step_output["val_f1_macro"])
+            val_acc.append(validation_step_output["val_acc"])
 
-        self.log("overall_val_loss", val_loss_mean)
-        self.log("overall_val_acc", val_acc_mean)
-        self.log("overall_val_f1_micro", val_f1_micro_mean)
-        self.log("overall_val_f1_macro", val_f1_macro_mean)
+        self.log("overall_val_loss", torch.vstack(val_loss).mean())
+        self.log("overall_val_f1_micro", torch.vstack(val_f1_micro).mean())
+        self.log("overall_val_f1_macro", torch.vstack(val_f1_macro).mean())
+        self.log("overall_val_acc", torch.vstack(val_acc).mean())
 
     def test_step(
         self: pl.LightningModule, batch: torch.Tensor, batch_idx: torch.Tensor
@@ -310,9 +314,6 @@ class LSTM(pl.LightningModule):
         label = batch["target_label"]
         class_logits, reg_out = self.forward(spec)
 
-        # loss_cls = self.class_loss_fn(class_logits, label)
-        # loss_reg = self.reg_loss_fn(reg_out.squeeze(1), r_time)
-        # loss = loss_cls + loss_reg
         loss, loss_cls, loss_reg = self.compute_loss(
             class_logits, reg_out.squeeze(1), label, r_time
         )
