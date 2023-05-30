@@ -1,5 +1,6 @@
 import os
 from pytorch_lightning.loggers.mlflow import MLFlowLogger
+from typing import Literal
 
 
 class CustomMLFLogger(MLFlowLogger):
@@ -15,6 +16,7 @@ class CustomMLFLogger(MLFlowLogger):
         prefix: str = "",
         artifact_location: str = None,
         run_id: str = None,
+        log_model: Literal[True, False, "all"] = False,
     ) -> None:
         """ """
         if tracking_uri is None:
@@ -25,12 +27,8 @@ class CustomMLFLogger(MLFlowLogger):
             tracking_uri,
             tags,
             save_dir,
+            log_model,
             prefix,
             artifact_location,
             run_id,
-        )
-
-    def log_model(self, local_path: str, file_name: str) -> None:
-        self.experiment.log_artifact(
-            run_id=self.run_id, local_path=local_path, artifact_path=file_name
         )

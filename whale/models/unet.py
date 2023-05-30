@@ -179,7 +179,7 @@ class UNet(pl.LightningModule):
         logits = self.forward(sig)
         loss = self.loss_fn(logits, target)
         self.log("train_loss", loss)
-        preds = torch.softmax(logits, dim=1)
+        preds = torch.argmax(logits, dim=1)
         acc = self.compute_metrics(preds, target)
 
         return {"loss": loss, "acc": acc}
@@ -216,7 +216,7 @@ class UNet(pl.LightningModule):
         target = batch["target"]
         logits = self.forward(sig)
         loss = self.loss_fn(logits, target)
-        preds = torch.softmax(logits, dim=1)
+        preds = torch.argmax(logits, dim=1)
         acc = self.compute_metrics(preds, target)
 
         self.log("val_loss", loss)
@@ -256,7 +256,7 @@ class UNet(pl.LightningModule):
         target = batch["target"]
         logits = self.forward(sig)
         loss = self.loss_fn(logits, target)
-        preds = torch.softmax(logits, dim=1)
+        preds = torch.argmax(logits, dim=1)
         acc = self.compute_metrics(preds, target)
 
         self.log("test_loss", loss)
@@ -286,6 +286,6 @@ if __name__ == "__main__":
     print("output shape: ", logits.shape)
     print(model.loss_fn(logits, target))
 
-    preds = torch.softmax(logits, dim=1)
+    preds = torch.argmax(logits, dim=1)
     acc = model.compute_metrics(preds, target)
     print(acc)
