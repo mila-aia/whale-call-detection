@@ -10,6 +10,8 @@ from datetime import timedelta
 import random
 import numpy as np
 from obspy import UTCDateTime
+import itertools
+
 
 import yaml
 
@@ -57,14 +59,25 @@ def remove_overlapping_noise_samples(
     full_data = full_data.rename(
         columns={"startdate": "startdate_fw", "enddate": "enddate_fw"}
     )
-    ixs = (
-        df_noise.reset_index()
-        .merge(full_data, on=["file_path"])
-        .query(
-            "(startdate_noise < enddate_fw) & (enddate_noise > startdate_fw)"
-        )
-    )["index"]
-    return ixs
+
+    total = []
+    for df in np.array_split(df_noise, 5):
+
+        ixs = (
+            df[["startdate_noise", "enddate_noise", "file_path"]]
+            .reset_index()
+            .merge(
+                full_data[["startdate_fw", "enddate_fw", "file_path"]],
+                on=["file_path"],
+            )
+            .query(
+                "(startdate_noise < enddate_fw) "
+                + "& (enddate_noise > startdate_fw)"
+            )
+        )["index"].values
+        total.append(ixs)
+
+    return list(itertools.chain.from_iterable(total))
 
 
 def generate_noise_samples(
@@ -368,6 +381,7 @@ def main() -> None:
 
         # Loop for the 2 whale types
         for whale_type in ["bw", "fw"]:
+            # for whale_type in ["fw"]:
 
             # Get data from matlab .mat matrix
             df_calls = pd.DataFrame(
@@ -583,6 +597,9 @@ def main() -> None:
                 labels_output / whale_type.upper() / "MIXED" / extension,
                 index=False,
             )
+            del grouped_hq
+            del hq_mixed
+
             # Normal
             extension = csv_name[:2] + "_HQ" + csv_name[2:]
             final_df_hq = final_df[
@@ -598,6 +615,8 @@ def main() -> None:
                 labels_output / whale_type.upper() / "MIXED" / extension,
                 index=False,
             )
+            del final_df_hq
+            del hq_mixed
 
             # MQ : R0 > 3 and SNR0 > 1
             # Grouped
@@ -616,6 +635,9 @@ def main() -> None:
                 labels_output / whale_type.upper() / "MIXED" / extension,
                 index=False,
             )
+            del grouped_mq
+            del mq_mixed
+
             # Normal
             extension = csv_name[:2] + "_MQ" + csv_name[2:]
             final_df_mq = final_df[
