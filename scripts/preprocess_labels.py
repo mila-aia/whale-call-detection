@@ -367,8 +367,7 @@ def main() -> None:
         list_files = pass_checks(list_files_detailled)
 
         # Loop for the 2 whale types
-        # for whale_type in ["bw", "fw"]:
-        for whale_type in ["fw"]:
+        for whale_type in ["bw", "fw"]:
 
             # Get data from matlab .mat matrix
             df_calls = pd.DataFrame(
@@ -650,9 +649,7 @@ def main() -> None:
             )
             # Normal
             extension = csv_name[:2] + "_LQ" + csv_name[2:]
-            final_df_lq = final_df[
-                (final_df.R > 3) & (final_df.SNR > 1)
-            ].copy()
+            final_df_lq = final_df.copy()
             final_df_lq.to_csv(
                 labels_output / whale_type.upper() / extension, index=False
             )
