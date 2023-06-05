@@ -9,6 +9,9 @@ import scipy.io
 from datetime import timedelta
 import random
 import numpy as np
+from obspy import UTCDateTime
+import itertools
+
 
 import yaml
 
@@ -28,6 +31,140 @@ def read_stadir(mat_file: dict, whale_type: str) -> dict:
         name_station[0] for name_station in mat_file[whale_type][:, 0]
     ]
     return {v + 1: k for v, k in enumerate(list_stations)}
+
+
+def timeShift(input_time: str, shift: int) -> str:
+    # shift the input_time by shift seconds
+    shifted_time = UTCDateTime(input_time) + shift
+    return UTCDateTime.strftime(shifted_time, "%Y-%m-%d %H:%M:%S.%f")
+
+
+def timeDiff(input_time: str, ref_time: str) -> float:
+    # calculate the time difference between input_time and ref_time
+    delta_t = UTCDateTime(input_time) - UTCDateTime(ref_time)
+    return delta_t
+
+
+def remove_overlapping_noise_samples(
+    df_noise: pd.DataFrame, full_data: pd.DataFrame
+) -> pd.Series:
+
+    df_noise["startdate"] = pd.to_datetime(df_noise["time_window_start"])
+    df_noise["enddate"] = pd.to_datetime(df_noise["time_window_end"])
+    full_data["startdate"] = pd.to_datetime(full_data["time_window_start"])
+    full_data["enddate"] = pd.to_datetime(full_data["time_window_end"])
+    df_noise = df_noise.rename(
+        columns={"startdate": "startdate_noise", "enddate": "enddate_noise"}
+    )
+    full_data = full_data.rename(
+        columns={"startdate": "startdate_fw", "enddate": "enddate_fw"}
+    )
+
+    total = []
+    for df in np.array_split(df_noise, 5):
+
+        ixs = (
+            df[["startdate_noise", "enddate_noise", "file_path"]]
+            .reset_index()
+            .merge(
+                full_data[["startdate_fw", "enddate_fw", "file_path"]],
+                on=["file_path"],
+            )
+            .query(
+                "(startdate_noise < enddate_fw) "
+                + "& (enddate_noise > startdate_fw)"
+            )
+        )["index"].values
+        total.append(ixs)
+
+    return list(itertools.chain.from_iterable(total))
+
+
+def generate_noise_samples(
+    fw_filt_hq: pd.DataFrame,
+    full_data: pd.DataFrame,
+    noise_shift: int,
+    noise_duration: int,
+) -> pd.DataFrame:
+
+    # get noise_windonw_end by shifting time_window_start back
+    # by noise_shift seconds
+    fw_filt_hq["noise_window_end"] = fw_filt_hq["time_window_start"].apply(
+        lambda x: timeShift(x, -1 * noise_shift)
+    )
+    # get noise_windonw_start by shifting noise_windonw_end back
+    # by noise_duration seconds
+    fw_filt_hq["noise_window_start"] = fw_filt_hq["noise_window_end"].apply(
+        lambda x: timeShift(x, -1 * noise_duration)
+    )
+
+    # split fw_filt_hq into two dataframes:
+    # one without noise_window_start and noise_window_end;
+    # the other without time_window_start and time_window_end
+    fw_filt_hq_fw = fw_filt_hq[
+        [
+            "file_path",
+            "time_window_start",
+            "time_window_end",
+            "time_R_max",
+            "time_call_start",
+            "time_call_end",
+            "R",
+            "SNR",
+            "group_id",
+            "station_code",
+            "whale_type",
+            "component",
+        ]
+    ].copy()
+    fw_filt_hq_noise = fw_filt_hq[
+        [
+            "file_path",
+            "noise_window_start",
+            "noise_window_end",
+            "time_R_max",
+            "time_call_start",
+            "time_call_end",
+            "R",
+            "SNR",
+            "group_id",
+            "station_code",
+            "whale_type",
+            "component",
+        ]
+    ].copy()
+    # rename noise_window_start to time_window_start
+    # and noise_window_end to time_window_end
+    fw_filt_hq_noise.rename(
+        columns={
+            "noise_window_start": "time_window_start",
+            "noise_window_end": "time_window_end",
+        },
+        inplace=True,
+    )
+    fw_filt_hq_noise["time_R_max"] = fw_filt_hq_noise["time_window_start"]
+    fw_filt_hq_noise["time_call_start"] = fw_filt_hq_noise["time_window_start"]
+    fw_filt_hq_noise["time_call_end"] = fw_filt_hq_noise["time_window_end"]
+    fw_filt_hq_noise["R"] = 0
+    fw_filt_hq_noise["SNR"] = -99
+    fw_filt_hq_noise["whale_type"] = "noise"
+    fw_filt_hq_noise["group_id"] = -1
+
+    # Check if noise samples overlap with whale calls
+    before = fw_filt_hq_noise.shape[0]
+    ixs = remove_overlapping_noise_samples(fw_filt_hq_noise, full_data)
+    fw_filt_hq_noise = fw_filt_hq_noise[~fw_filt_hq_noise.index.isin(ixs)]
+    after = fw_filt_hq_noise.shape[0]
+    print("Number of overlapping noise samples removed: ", before - after)
+
+    # concat fw_filt_hq_fw and fw_filt_hq_noise
+    fw_filt_hq_mixed = pd.concat(
+        [fw_filt_hq_fw, fw_filt_hq_noise], ignore_index=True
+    )
+    # shuffle the rows and save to out_file
+    fw_filt_hq_mixed = fw_filt_hq_mixed.sample(frac=1).reset_index(drop=True)
+
+    return fw_filt_hq_mixed
 
 
 def preprocess_(dataset: pd.DataFrame, stadir: dict) -> pd.DataFrame:
@@ -189,6 +326,9 @@ def main() -> None:
     # Output
     labels_output = Path(param_data["paths"]["whale_data_cluster"]) / "LABELS"
 
+    noise_duration = args.noise_duration
+    noise_shift = args.noise_shift
+
     labels_output.mkdir(
         parents=True, exist_ok=True
     )  # Create folder if not exist
@@ -241,6 +381,7 @@ def main() -> None:
 
         # Loop for the 2 whale types
         for whale_type in ["bw", "fw"]:
+            # for whale_type in ["fw"]:
 
             # Get data from matlab .mat matrix
             df_calls = pd.DataFrame(
@@ -392,35 +533,37 @@ def main() -> None:
             )
 
             # Group by and Save datasets
-            grouped_df = final_df.groupby(
-                ["station_code", "time_call_start"]
-            ).agg(
-                list_components=("component", lambda x: " ".join(x)),
-                number_components=("component", "count"),
-                R=("R", "max"),
-                SNR=("SNR", "max"),
-                file_path=(
-                    "file_path",
-                    lambda x: list(x)[0][:-7] + "CHANNEL" + list(x)[0][-4:],
-                ),
-                time_window_start=(
-                    "time_window_start",
-                    lambda x: list(x)[0],
-                ),
-                time_window_end=(
-                    "time_window_end",
-                    lambda x: list(x)[0],
-                ),
-                time_call_end=("time_call_end", "min"),
-                whale_type=("whale_type", "min"),
+            grouped_df = (
+                final_df.groupby(["station_code", "time_call_start"])
+                .agg(
+                    component=("component", lambda x: " ".join(x)),
+                    number_components=("component", "count"),
+                    time_R_max=("time_R_max", lambda x: list(x)[0]),
+                    R=("R", "max"),
+                    SNR=("SNR", "max"),
+                    group_id=("group_id", "max"),
+                    file_path=(
+                        "file_path",
+                        lambda x: list(x)[0][:-7]
+                        + "CHANNEL"
+                        + list(x)[0][-4:],
+                    ),
+                    time_window_start=(
+                        "time_window_start",
+                        lambda x: list(x)[0],
+                    ),
+                    time_window_end=(
+                        "time_window_end",
+                        lambda x: list(x)[0],
+                    ),
+                    time_call_end=("time_call_end", "min"),
+                    whale_type=("whale_type", "min"),
+                )
+                .reset_index()
             )
 
-            grouped_df.to_csv(
-                labels_output / whale_type.upper() / csv_name_grouped,
-                index=False,
-            )
-
-            final_df[
+            # Save dataframe
+            final_df = final_df[
                 [
                     "file_path",
                     "time_window_start",
@@ -435,8 +578,109 @@ def main() -> None:
                     "whale_type",
                     "component",
                 ]
-            ].to_csv(
-                labels_output / whale_type.upper() / csv_name, index=False
+            ].copy()
+
+            # HQ : R0 > 5 and SNR0 > 5
+            # Grouped
+            extension = csv_name_grouped[:2] + "_HQ" + csv_name_grouped[2:]
+            grouped_hq = grouped_df[
+                (grouped_df.R > 5) & (grouped_df.SNR > 5)
+            ].copy()
+            grouped_hq.to_csv(
+                labels_output / whale_type.upper() / extension,
+                index=False,
+            )
+            hq_mixed = generate_noise_samples(
+                grouped_hq, grouped_df, noise_shift, noise_duration
+            )
+            hq_mixed.to_csv(
+                labels_output / whale_type.upper() / "MIXED" / extension,
+                index=False,
+            )
+            del grouped_hq
+            del hq_mixed
+
+            # Normal
+            extension = csv_name[:2] + "_HQ" + csv_name[2:]
+            final_df_hq = final_df[
+                (final_df.R > 5) & (final_df.SNR > 5)
+            ].copy()
+            final_df_hq.to_csv(
+                labels_output / whale_type.upper() / extension, index=False
+            )
+            hq_mixed = generate_noise_samples(
+                final_df_hq, final_df, noise_shift, noise_duration
+            )
+            hq_mixed.to_csv(
+                labels_output / whale_type.upper() / "MIXED" / extension,
+                index=False,
+            )
+            del final_df_hq
+            del hq_mixed
+
+            # MQ : R0 > 3 and SNR0 > 1
+            # Grouped
+            extension = csv_name_grouped[:2] + "_MQ" + csv_name_grouped[2:]
+            grouped_mq = grouped_df[
+                (grouped_df.R > 3) & (grouped_df.SNR > 1)
+            ].copy()
+            grouped_mq.to_csv(
+                labels_output / whale_type.upper() / extension,
+                index=False,
+            )
+            mq_mixed = generate_noise_samples(
+                grouped_mq, grouped_df, noise_shift, noise_duration
+            )
+            mq_mixed.to_csv(
+                labels_output / whale_type.upper() / "MIXED" / extension,
+                index=False,
+            )
+            del grouped_mq
+            del mq_mixed
+
+            # Normal
+            extension = csv_name[:2] + "_MQ" + csv_name[2:]
+            final_df_mq = final_df[
+                (final_df.R > 3) & (final_df.SNR > 1)
+            ].copy()
+            final_df_mq.to_csv(
+                labels_output / whale_type.upper() / extension, index=False
+            )
+            mq_mixed = generate_noise_samples(
+                final_df_mq, final_df, noise_shift, noise_duration
+            )
+            mq_mixed.to_csv(
+                labels_output / whale_type.upper() / "MIXED" / extension,
+                index=False,
+            )
+
+            # LQ : All data
+            # Grouped
+            extension = csv_name_grouped[:2] + "_LQ" + csv_name_grouped[2:]
+            grouped_lq = grouped_df.copy()
+            grouped_lq.to_csv(
+                labels_output / whale_type.upper() / extension,
+                index=False,
+            )
+            lq_mixed = generate_noise_samples(
+                grouped_lq, grouped_df, noise_shift, noise_duration
+            )
+            lq_mixed.to_csv(
+                labels_output / whale_type.upper() / "MIXED" / extension,
+                index=False,
+            )
+            # Normal
+            extension = csv_name[:2] + "_LQ" + csv_name[2:]
+            final_df_lq = final_df.copy()
+            final_df_lq.to_csv(
+                labels_output / whale_type.upper() / extension, index=False
+            )
+            lq_mixed = generate_noise_samples(
+                final_df_lq, final_df, noise_shift, noise_duration
+            )
+            lq_mixed.to_csv(
+                labels_output / whale_type.upper() / "MIXED" / extension,
+                index=False,
             )
 
 
@@ -450,9 +694,22 @@ def parse_args() -> Namespace:
     arg_parser.add_argument(
         "--input_file",
         default="/network/projects/aia/whale_call/"
-        + "MATLAB_OUTPUT/WhaleDetectionsLSZ_new.mat",
+        + "MATLAB_OUTPUT/WhaleDetectionsLSZ_new_cp.mat",
         type=str,
         help="path to the input file",
+    )
+
+    arg_parser.add_argument(
+        "--noise_duration",
+        default=2,
+        type=int,
+        help="duration of noise window in seconds",
+    )
+    arg_parser.add_argument(
+        "--noise_shift",
+        default=5,
+        type=int,
+        help="time shift of data window to get noise window in seconds",
     )
 
     return arg_parser.parse_args()
