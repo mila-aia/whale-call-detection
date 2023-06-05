@@ -11,12 +11,13 @@
 
 module --quiet load anaconda/3
 conda activate whale
-
+EXP_NAME="call-level-class-reg"
+RUN_NAME="baseline_lstm_run"
 python models/lstm.py \
     --data-path /network/projects/aia/whale_call/LABELS/fw_HQ_filt_mixed \
     --mlruns-dir /network/projects/aia/whale_call/mlruns \
-    --exp-name "lstm" \
-    --run-name 'baseline_run' \
+    --exp-name $EXP_NAME \
+    --run-name $RUN_NAME \
     --input-dim 129 \
     --hidden-dim 128 \
     --num-layers 3 \
