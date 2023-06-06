@@ -23,5 +23,5 @@ lr:
 reg_loss_weight:
   type: float
   min: 0.1
-  max: 1.0
+  max: 0.5
   step: 0.1
