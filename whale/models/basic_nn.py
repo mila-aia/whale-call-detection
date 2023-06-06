@@ -50,6 +50,7 @@ class LSTM(pl.LightningModule):
         self.bidirectional = bidirectional
         self.reg_loss_weight = reg_loss_weight
         self.lr = lr
+        self.num_directions = 2 if bidirectional else 1
 
         self.lstm = nn.LSTM(
             input_size=self.input_dim,
@@ -75,15 +76,16 @@ class LSTM(pl.LightningModule):
         """
 
         # Forward propagate LSTM
-        out, _ = self.lstm(x)
-        out = self.dropout(out[:, -1, :])
+        _, (hn, _) = self.lstm(x)
 
+        last_hidden_state = hn[-self.num_directions :].mean(axis=0)
         # Decode the hidden state of the last time step
-
         # Unnormalized logits for each class.
-        class_logits = self.hidden2class(out)  # (batch_size, n_classes)
+        class_logits = self.hidden2class(
+            last_hidden_state
+        )  # (batch_size, n_classes)
         # regression output
-        reg_out = self.hidden2time(out)  # (batch_size, 1)
+        reg_out = self.hidden2time(last_hidden_state)  # (batch_size, 1)
 
         return class_logits, reg_out
 
