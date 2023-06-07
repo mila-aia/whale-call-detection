@@ -50,6 +50,7 @@ class LSTM(pl.LightningModule):
         self.bidirectional = bidirectional
         self.reg_loss_weight = reg_loss_weight
         self.lr = lr
+        self.num_directions = 2 if bidirectional else 1
 
         self.lstm = nn.LSTM(
             input_size=self.input_dim,
@@ -75,15 +76,16 @@ class LSTM(pl.LightningModule):
         """
 
         # Forward propagate LSTM
-        out, _ = self.lstm(x)
-        out = self.dropout(out[:, -1, :])
+        _, (hn, _) = self.lstm(x)
 
+        last_hidden_state = hn[-self.num_directions :].mean(axis=0)
         # Decode the hidden state of the last time step
-
         # Unnormalized logits for each class.
-        class_logits = self.hidden2class(out)  # (batch_size, n_classes)
+        class_logits = self.hidden2class(
+            last_hidden_state
+        )  # (batch_size, n_classes)
         # regression output
-        reg_out = self.hidden2time(out)  # (batch_size, 1)
+        reg_out = self.hidden2time(last_hidden_state)  # (batch_size, 1)
 
         return class_logits, reg_out
 
@@ -114,6 +116,9 @@ class LSTM(pl.LightningModule):
             Tuple of total loss, classification loss and regression loss.
 
         """
+        if w < 0 or w > 1:
+            raise ValueError("w must be within [0, 1]")
+
         loss_cls = self.class_loss_fn(logits_pred, label)
 
         # write weighted MSE loss, where the weight is the true class label
@@ -126,7 +131,7 @@ class LSTM(pl.LightningModule):
         loss_reg = weighted_mse_loss(time_pred, r_time, label)
         # loss_reg = self.reg_loss_fn(time_pred, r_time)
 
-        loss = loss_cls + w * loss_reg
+        loss = (1.0 - w) * loss_cls + w * loss_reg
 
         return loss, loss_cls, loss_reg
 

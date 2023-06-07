@@ -79,3 +79,25 @@ To train a 1D UNet model on a subset of dataset for testing purpose:
 ```
 python whale/main.py fit --config experiments/mini-test.yaml
 ```
+
+
+### Consulting MLflow logs
+MLFlow logs from an `mlruns` folder located in the current directory can be consulted as follow:
+```
+mlflow ui
+```
+Otherwise, MLFlow logs can be consulted as follow:
+```
+mlflow ui --backend-store-uri ABSOLUTE_PATH_TO_MLRUNS_DIRECTORY
+```
+
+
+### Consulting Optuna logs
+Optuna logs from a `optuna.sqlite3` database located in the current directory can be consulted as follow:
+```
+optuna-dashboard sqlite:///optuna.sqlite3
+```
+Otherwise, Optuna logs can be consulted as follow:
+```
+optuna-dashboard sqlite:///ABSOLUTE_PATH_TO_OPTUNA.SQLITE3_FILE
+```

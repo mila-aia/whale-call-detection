@@ -20,7 +20,7 @@ setup(
         "transformers==4.20.1",
         "torchaudio==0.12.1",
         "torch==1.12.1",
-        "mlflow==1.27.0",
+        "mlflow>=1.27.0",
         "librosa==0.9.2",
         "pytorch_lightning==1.9.2",
         "obspy==1.3.0",

@@ -172,6 +172,7 @@ def parse_args() -> Namespace:
     )
     arg_parser.add_argument(
         "--data-type",
+        choices=["spec", "waveform"],
         default="spec",
         type=str,
         help="data type to use for training",
