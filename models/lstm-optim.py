@@ -38,13 +38,13 @@ def main() -> None:
         num_classes=args.num_classes,
         input_dim=args.input_dim,
         epoch_num=search_epoch_num,
-        metric_type=metric_to_optimize,
         train_loader=train_loader,
         valid_loader=valid_loader,
         hparams_space=hparams_space,
         experiment_name=f"{experiment_name}",
         save_dir=str(mlruns_dir),
         direction=optimize_direction,
+        metric_to_optimize=metric_to_optimize,
     )
     study = optuna.create_study(
         storage=f"sqlite:///{optuna_db}",

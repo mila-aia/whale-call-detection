@@ -52,7 +52,6 @@ class LSTMTuningObjective:
         num_classes: int = 2,
         input_dim: int = 129,
         epoch_num: int = 20,
-        metric_type: str = "overall_val_loss",
         train_loader: DataLoader = None,
         valid_loader: DataLoader = None,
         experiment_name: str = None,
@@ -64,7 +63,6 @@ class LSTMTuningObjective:
         self.input_dim = input_dim
         self.epoch_num = epoch_num
         self.hparams_space = hparams_space
-        self.metric_type = metric_type
         self.train_loader = train_loader
         self.valid_loader = valid_loader
         self.experiment_name = experiment_name
