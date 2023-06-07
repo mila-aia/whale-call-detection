@@ -3,6 +3,7 @@ import yaml  # type: ignore
 from optuna.trial import Trial
 from pytorch_lightning import Trainer
 from whale.models import LSTM
+from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.loggers import MLFlowLogger
 import numpy as np
 from typing import Literal
@@ -69,7 +70,6 @@ class LSTMTuningObjective:
         self.valid_loader = valid_loader
         self.experiment_name = experiment_name
         self.save_dir = save_dir
-        self.call_backs = call_backs
         self.direction = direction
         self.metric_to_optimize = metric_to_optimize
 
@@ -84,6 +84,13 @@ class LSTMTuningObjective:
             reg_loss_weight=model_conf["reg_loss_weight"],
             lr=model_conf["lr"],
         )
+        early_stopper = EarlyStopping(
+            monitor=self.metric_to_optimize,
+            patience=2,
+            mode=self.direction[0:3],
+            verbose=True,
+        )
+
         _logger = MLFlowLogger(
             experiment_name=self.experiment_name,
             save_dir=self.save_dir,
@@ -99,7 +106,7 @@ class LSTMTuningObjective:
             enable_checkpointing=True,
             check_val_every_n_epoch=1,
             logger=_logger,
-            callbacks=self.call_backs,
+            callbacks=[early_stopper],
         )
 
         trainer.fit(

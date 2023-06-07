@@ -34,13 +34,6 @@ def main() -> None:
     valid_loader = whale_dm.val_dataloader()
     test_loader = whale_dm.test_dataloader()
 
-    early_stopper = EarlyStopping(
-        monitor=metric_to_optimize,
-        patience=2,
-        mode=optimize_direction[0:3],
-        verbose=True,
-    )
-
     optim_objective = LSTMTuningObjective(
         num_classes=args.num_classes,
         input_dim=args.input_dim,
@@ -51,7 +44,6 @@ def main() -> None:
         hparams_space=hparams_space,
         experiment_name=f"{experiment_name}",
         save_dir=str(mlruns_dir),
-        call_backs=[early_stopper],
         direction=optimize_direction,
     )
     study = optuna.create_study(
