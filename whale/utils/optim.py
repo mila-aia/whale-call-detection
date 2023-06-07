@@ -57,7 +57,6 @@ class LSTMTuningObjective:
         valid_loader: DataLoader = None,
         experiment_name: str = None,
         save_dir: str = None,
-        call_backs: list = None,
         direction: Literal["minimize", "maximize"] = "minimize",
         metric_to_optimize: str = "overall_val_loss",
     ) -> None:
