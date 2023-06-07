@@ -116,6 +116,9 @@ class LSTM(pl.LightningModule):
             Tuple of total loss, classification loss and regression loss.
 
         """
+        if w < 0 or w > 1:
+            raise ValueError("w must be within [0, 1]")
+
         loss_cls = self.class_loss_fn(logits_pred, label)
 
         # write weighted MSE loss, where the weight is the true class label
@@ -128,7 +131,7 @@ class LSTM(pl.LightningModule):
         loss_reg = weighted_mse_loss(time_pred, r_time, label)
         # loss_reg = self.reg_loss_fn(time_pred, r_time)
 
-        loss = loss_cls + w * loss_reg
+        loss = (1.0 - w) * loss_cls + w * loss_reg
 
         return loss, loss_cls, loss_reg
 
