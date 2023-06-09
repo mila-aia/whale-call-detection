@@ -12,6 +12,7 @@ This project uses Deep Learning techniques to improve whale call detection proce
 ```
 cd whale-call-detection
 conda env create
+pip install --editable .
 ```
 
 3. (Optional) Install pre-commits hooks:
