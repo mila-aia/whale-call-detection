@@ -16,11 +16,10 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "pandas==1.4.3",
-        "speechbrain==0.5.13",
         "transformers==4.20.1",
         "torchaudio==0.12.1",
         "torch==1.12.1",
-        "mlflow>=1.27.0",
+        "mlflow>=1.0.0",
         "librosa==0.9.2",
         "pytorch_lightning==1.9.2",
         "obspy==1.3.0",

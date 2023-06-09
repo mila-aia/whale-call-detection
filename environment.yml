@@ -16,4 +16,4 @@ dependencies:
     - flake8-bugbear==22.9.11
     - nbstripout==0.6.0
     - -r requirements.txt
-    - install --editable .
+    - .
