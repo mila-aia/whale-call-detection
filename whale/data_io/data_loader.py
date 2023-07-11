@@ -46,6 +46,7 @@ class WhaleDataset(Dataset):
         meta_data = dict(self.labels.iloc[index])
         start_time = obspy.UTCDateTime(self.labels["time_window_start"][index])
         end_time = obspy.UTCDateTime(self.labels["time_window_end"][index])
+
         tr = obspy.read(sac_path, starttime=start_time, endtime=end_time)
         input_example = tr[0].data
 
@@ -113,18 +114,39 @@ class WhaleDatasetSpec(Dataset):
         """
         sac_path = self.labels["file_path"][index]
         meta_data = dict(self.labels.iloc[index])
+
+        component = self.labels["component"][index].split(" ")
+
         time_R_max = obspy.UTCDateTime(self.labels["time_R_max"][index])
         start_time = obspy.UTCDateTime(self.labels["time_window_start"][index])
         end_time = obspy.UTCDateTime(self.labels["time_window_end"][index])
         call_type = self.labels["whale_type"][index]
 
-        tr = obspy.read(sac_path, starttime=start_time, endtime=end_time)
-        input_waveform = tr[0].data
+        target_label = 0 if call_type == "noise" else 1
+        target_time_R_max = time_R_max - start_time
+        target_time_R_max = np.float32(target_time_R_max)
 
-        # Calculate spectrogram with a shape of (n_freq, n_time).
-        input_spec, _, _ = cal_spectrogram(
-            input_waveform, samp_rate=self.fs, per_lap=0.9, wlen=0.5, mult=4
-        )
+        list_spec = []
+
+        for comp in component:
+            tr = obspy.read(
+                sac_path.replace("CHANNEL", comp),
+                starttime=start_time,
+                endtime=end_time,
+            )
+            input_waveform = tr[0].data
+
+            # Calculate spectrogram with a shape of (n_freq, n_time).
+            input_spec, _, _ = cal_spectrogram(
+                input_waveform,
+                samp_rate=self.fs,
+                per_lap=0.9,
+                wlen=0.5,
+                mult=4,
+            )
+            list_spec.append(input_spec)
+        input_spec = np.average(list_spec, axis=0)
+
         if self.normalize:
             min_val = input_spec.min()
             max_val = input_spec.max()
@@ -134,15 +156,10 @@ class WhaleDatasetSpec(Dataset):
             max_val = input_waveform.max()
             input_waveform = (input_waveform - min_val) / (max_val - min_val)
 
-        target_label = 0 if call_type == "noise" else 1
-
-        target_time_R_max = time_R_max - start_time
-        target_time_R_max = np.float32(target_time_R_max)
-
         input_waveform = np.expand_dims(input_waveform, axis=0)
-        input_spec = input_spec.T  # transpose to (n_time, n_freq)
-
         input_waveform = torch.from_numpy(input_waveform).float()
+
+        input_spec = input_spec.T  # transpose to (n_time, n_freq)
         input_spec = torch.from_numpy(input_spec).float()
 
         return {
@@ -193,7 +210,9 @@ class WhaleDataModule(pl.LightningDataModule):
         # here, we will actually assign train/val datasets
         # for use in dataloaders
         if stage == "fit" or stage is None:
+
             if self.data_type == "spec":
+
                 self.train_ds = WhaleDatasetSpec(
                     labels_file=self.data_dir + "/train.csv", fs=self.fs
                 )
@@ -201,6 +220,7 @@ class WhaleDataModule(pl.LightningDataModule):
                     labels_file=self.data_dir + "/valid.csv", fs=self.fs
                 )
             elif self.data_type == "waveform":
+
                 self.train_ds = WhaleDataset(
                     labels_file=self.data_dir + "/train.csv", fs=self.fs
                 )
