@@ -3,6 +3,7 @@ whale_constant:
     name: Fin Whale
     window: 120
     window_size: 2
+    noise_shift: 5
     high_cut_bandpass: 32
     low_cut_bandpass: 12
     call_duration: 1
@@ -11,7 +12,8 @@ whale_constant:
   bw:
     name: Blue Whale
     window: 720
-    window_size: 40
+    window_size: 16
+    noise_shift: 30
     high_cut_bandpass: 32
     low_cut_bandpass: 10
     call_duration: 8

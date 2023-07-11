@@ -326,9 +326,6 @@ def main() -> None:
     # Output
     labels_output = Path(param_data["paths"]["whale_data_cluster"]) / "LABELS"
 
-    noise_duration = args.noise_duration
-    noise_shift = args.noise_shift
-
     labels_output.mkdir(
         parents=True, exist_ok=True
     )  # Create folder if not exist
@@ -591,7 +588,10 @@ def main() -> None:
                 index=False,
             )
             hq_mixed = generate_noise_samples(
-                grouped_hq, grouped_df, noise_shift, noise_duration
+                grouped_hq,
+                grouped_df,
+                param_data["whale_constant"][whale_type]["noise_shift"],
+                param_data["whale_constant"][whale_type]["window_size"],
             )
             hq_mixed.to_csv(
                 labels_output / whale_type.upper() / "MIXED" / extension,
@@ -609,7 +609,10 @@ def main() -> None:
                 labels_output / whale_type.upper() / extension, index=False
             )
             hq_mixed = generate_noise_samples(
-                final_df_hq, final_df, noise_shift, noise_duration
+                final_df_hq,
+                final_df,
+                param_data["whale_constant"][whale_type]["noise_shift"],
+                param_data["whale_constant"][whale_type]["window_size"],
             )
             hq_mixed.to_csv(
                 labels_output / whale_type.upper() / "MIXED" / extension,
@@ -629,7 +632,10 @@ def main() -> None:
                 index=False,
             )
             mq_mixed = generate_noise_samples(
-                grouped_mq, grouped_df, noise_shift, noise_duration
+                grouped_mq,
+                grouped_df,
+                param_data["whale_constant"][whale_type]["noise_shift"],
+                param_data["whale_constant"][whale_type]["window_size"],
             )
             mq_mixed.to_csv(
                 labels_output / whale_type.upper() / "MIXED" / extension,
@@ -647,7 +653,10 @@ def main() -> None:
                 labels_output / whale_type.upper() / extension, index=False
             )
             mq_mixed = generate_noise_samples(
-                final_df_mq, final_df, noise_shift, noise_duration
+                final_df_mq,
+                final_df,
+                param_data["whale_constant"][whale_type]["noise_shift"],
+                param_data["whale_constant"][whale_type]["window_size"],
             )
             mq_mixed.to_csv(
                 labels_output / whale_type.upper() / "MIXED" / extension,
@@ -663,7 +672,10 @@ def main() -> None:
                 index=False,
             )
             lq_mixed = generate_noise_samples(
-                grouped_lq, grouped_df, noise_shift, noise_duration
+                grouped_lq,
+                grouped_df,
+                param_data["whale_constant"][whale_type]["noise_shift"],
+                param_data["whale_constant"][whale_type]["window_size"],
             )
             lq_mixed.to_csv(
                 labels_output / whale_type.upper() / "MIXED" / extension,
@@ -676,7 +688,10 @@ def main() -> None:
                 labels_output / whale_type.upper() / extension, index=False
             )
             lq_mixed = generate_noise_samples(
-                final_df_lq, final_df, noise_shift, noise_duration
+                final_df_lq,
+                final_df,
+                param_data["whale_constant"][whale_type]["noise_shift"],
+                param_data["whale_constant"][whale_type]["window_size"],
             )
             lq_mixed.to_csv(
                 labels_output / whale_type.upper() / "MIXED" / extension,
@@ -697,19 +712,6 @@ def parse_args() -> Namespace:
         + "MATLAB_OUTPUT/WhaleDetectionsLSZ_new_cp.mat",
         type=str,
         help="path to the input file",
-    )
-
-    arg_parser.add_argument(
-        "--noise_duration",
-        default=2,
-        type=int,
-        help="duration of noise window in seconds",
-    )
-    arg_parser.add_argument(
-        "--noise_shift",
-        default=5,
-        type=int,
-        help="time shift of data window to get noise window in seconds",
     )
 
     return arg_parser.parse_args()
