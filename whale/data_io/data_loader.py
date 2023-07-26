@@ -6,8 +6,6 @@ import pytorch_lightning as pl
 from torch.utils.data import Dataset, DataLoader
 from whale.utils.spectrogram import cal_spectrogram
 
-# TODO Add Data Parser for 3-components seismic waves
-
 
 class WhaleDataset(Dataset):
     """Dataset class for iterating over the data."""
@@ -16,12 +14,21 @@ class WhaleDataset(Dataset):
     # fs: float
     # normalize: bool
     def __init__(
-        self: Dataset, labels_file: str, fs: int = 100, normalize: bool = True
+        self: Dataset,
+        labels_file: str,
+        fs: int = 100,
+        stage: str = None,
+        target_time_max_val: float = None,
+        target_time_min_val: float = None,
+        normalize: bool = True,
     ) -> None:
         """Initialize Whale Call Dataset.
         Args:
             labels_file (str): Path to the labels.
             fs (int): Sampling rate of the seismic signal.
+            stage (str): train, valid, or test
+            target_time_max_val (float): maximum value of target time
+            target_time_min_val (float): minimum value of target time
             normalize (bool): Normalize the waveform into [0,1].
         """
         super().__init__()
@@ -29,6 +36,22 @@ class WhaleDataset(Dataset):
         self.labels = pd.read_csv(labels_file)
         self.fs = fs
         self.normalize = normalize
+        self.stage = stage
+        if self.stage == "train" or self.stage is None:
+            target_time_R_max = self.labels["time_R_max"].apply(
+                obspy.UTCDateTime
+            ) - self.labels["time_window_start"].apply(obspy.UTCDateTime)
+            t_min_val = target_time_R_max[
+                self.labels["whale_type"] != "noise"
+            ].min()
+            t_max_val = target_time_R_max[
+                self.labels["whale_type"] != "noise"
+            ].max()
+            self.target_time_max_val = np.float32(t_max_val)
+            self.target_time_min_val = np.float32(t_min_val)
+        else:
+            self.target_time_max_val = np.float32(target_time_max_val)
+            self.target_time_min_val = np.float32(target_time_min_val)
 
     def __len__(self: Dataset) -> int:
         """Return the number of data items in MyDataset."""
@@ -86,17 +109,43 @@ class WhaleDatasetSpec(Dataset):
     # fs: float
     # normalize: bool
     def __init__(
-        self: Dataset, labels_file: str, fs: int = 100, normalize: bool = True
+        self: Dataset,
+        labels_file: str,
+        stage: str = None,
+        target_time_max_val: float = None,
+        target_time_min_val: float = None,
+        fs: int = 100,
+        normalize: bool = True,
     ) -> None:
         """Initialize Whale Call Dataset.
         Args:
             labels_file (str): Path to the labels.
+            stage (str): train, valid, or test
+            target_time_max_val (float): maximum value of target time
+            target_time_min_val (float): minimum value of target time
             fs (int): Sampling rate of the seismic signal.
             normalize (bool): Normalize the waveform into [0,1].
         """
         super().__init__()
 
         self.labels = pd.read_csv(labels_file)
+        self.stage = stage
+        if self.stage == "train" or self.stage is None:
+            target_time_R_max = self.labels["time_R_max"].apply(
+                obspy.UTCDateTime
+            ) - self.labels["time_window_start"].apply(obspy.UTCDateTime)
+            t_min_val = target_time_R_max[
+                self.labels["whale_type"] != "noise"
+            ].min()
+            t_max_val = target_time_R_max[
+                self.labels["whale_type"] != "noise"
+            ].max()
+            self.target_time_max_val = np.float32(t_max_val)
+            self.target_time_min_val = np.float32(t_min_val)
+        else:
+            self.target_time_max_val = np.float32(target_time_max_val)
+            self.target_time_min_val = np.float32(target_time_min_val)
+
         self.fs = fs
         self.normalize = normalize
 
@@ -125,6 +174,9 @@ class WhaleDatasetSpec(Dataset):
         target_label = 0 if call_type == "noise" else 1
         target_time_R_max = time_R_max - start_time
         target_time_R_max = np.float32(target_time_R_max)
+        target_time_R_max = (target_time_R_max - self.target_time_min_val) / (
+            self.target_time_max_val - self.target_time_min_val
+        )
 
         list_spec = []
 
@@ -161,7 +213,6 @@ class WhaleDatasetSpec(Dataset):
 
         input_spec = input_spec.T  # transpose to (n_time, n_freq)
         input_spec = torch.from_numpy(input_spec).float()
-
         return {
             "data_index": index,
             "sig": input_waveform,
@@ -199,6 +250,8 @@ class WhaleDataModule(pl.LightningDataModule):
         self.fs = sampling_rate
         self.train_ds, self.valid_ds, self.test_ds = None, None, None
         self.data_type = data_type
+        self.target_time_max_val: float = None
+        self.target_time_min_val: float = None
 
     def prepare_data(self: pl.LightningDataModule) -> None:
         """Downloads/extracts/unpacks the data if needed."""
@@ -214,30 +267,56 @@ class WhaleDataModule(pl.LightningDataModule):
             if self.data_type == "spec":
 
                 self.train_ds = WhaleDatasetSpec(
-                    labels_file=self.data_dir + "/train.csv", fs=self.fs
+                    labels_file=self.data_dir + "/train.csv",
+                    fs=self.fs,
+                    stage="train",
                 )
+                self.target_time_max_val = self.train_ds.target_time_max_val
+                self.target_time_min_val = self.train_ds.target_time_min_val
+
                 self.valid_ds = WhaleDatasetSpec(
-                    labels_file=self.data_dir + "/valid.csv", fs=self.fs
+                    labels_file=self.data_dir + "/valid.csv",
+                    fs=self.fs,
+                    stage="valid",
+                    target_time_max_val=self.target_time_max_val,
+                    target_time_min_val=self.target_time_min_val,
                 )
             elif self.data_type == "waveform":
 
                 self.train_ds = WhaleDataset(
-                    labels_file=self.data_dir + "/train.csv", fs=self.fs
+                    labels_file=self.data_dir + "/train.csv",
+                    fs=self.fs,
+                    stage="train",
                 )
+                self.target_time_max_val = self.train_ds.target_time_max_val
+                self.target_time_min_val = self.train_ds.target_time_min_val
+
                 self.valid_ds = WhaleDataset(
-                    labels_file=self.data_dir + "/valid.csv", fs=self.fs
+                    labels_file=self.data_dir + "/valid.csv",
+                    fs=self.fs,
+                    stage="valid",
+                    target_time_max_val=self.target_time_max_val,
+                    target_time_min_val=self.target_time_min_val,
                 )
             else:
                 raise ValueError("data_type must be 'spec' or 'waveform'")
 
-        if stage == "test" or stage is None:
+        if stage == "test":
             if self.data_type == "spec":
                 self.test_ds = WhaleDatasetSpec(
-                    labels_file=self.data_dir + "/test.csv", fs=self.fs
+                    labels_file=self.data_dir + "/test.csv",
+                    fs=self.fs,
+                    stage="test",
+                    target_time_max_val=self.target_time_max_val,
+                    target_time_min_val=self.target_time_min_val,
                 )
             elif self.data_type == "waveform":
                 self.test_ds = WhaleDataset(
-                    labels_file=self.data_dir + "/test.csv", fs=self.fs
+                    labels_file=self.data_dir + "/test.csv",
+                    fs=self.fs,
+                    stage="test",
+                    target_time_max_val=self.target_time_max_val,
+                    target_time_min_val=self.target_time_min_val,
                 )
             else:
                 raise ValueError("data_type must be 'spec' or 'waveform'")
