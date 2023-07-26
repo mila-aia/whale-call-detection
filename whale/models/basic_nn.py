@@ -348,7 +348,7 @@ class LSTM(pl.LightningModule):
         self.log("test_loss_reg", loss_reg)
 
         preds = torch.argmax(class_logits, dim=1)
-        test_metrics = self.self.compute_metrics(preds, label, reg_out, r_time)
+        test_metrics = self.compute_metrics(preds, label, reg_out, r_time)
 
         for key, value in test_metrics.items():
             self.log(f"test_{key}", value)
