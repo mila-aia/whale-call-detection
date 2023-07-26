@@ -301,7 +301,7 @@ class WhaleDataModule(pl.LightningDataModule):
             else:
                 raise ValueError("data_type must be 'spec' or 'waveform'")
 
-        if stage == "test":
+        if stage == "test" or stage is None:
             if self.data_type == "spec":
                 self.test_ds = WhaleDatasetSpec(
                     labels_file=self.data_dir + "/test.csv",
