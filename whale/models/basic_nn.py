@@ -187,7 +187,8 @@ class LSTM(pl.LightningModule):
             self.device
         )
         time_mae = mean_absolute_error(
-            time_preds.squeeze(-1), time_targets
+            time_preds[label_targets > 0].squeeze(-1),
+            time_targets[label_targets > 0],
         ) * (self.call_time_max_val - self.call_time_min_val)
         metrics_dict = dict(
             {
