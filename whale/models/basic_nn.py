@@ -16,6 +16,8 @@ class LSTM(pl.LightningModule):
         bidirectional: bool = False,
         reg_loss_weight: float = 0.5,
         lr: float = 1e-3,
+        call_time_min_val: float = 0.0,
+        call_time_max_val: float = 16.0,
     ) -> None:
         """
         LSTM model for whale classification and time prediction.
@@ -37,6 +39,10 @@ class LSTM(pl.LightningModule):
             Weight for the regression loss, by default 0.5
         lr : float, optional
             Learning rate, by default 1e-3
+        call_time_min_val : float, optional
+            Minimum value for the call time, by default 0.0
+        call_time_max_val : float, optional
+            Maximum value for the call time, by default 16.0
         """
 
         super(LSTM, self).__init__()
@@ -51,6 +57,8 @@ class LSTM(pl.LightningModule):
         self.reg_loss_weight = reg_loss_weight
         self.lr = lr
         self.num_directions = 2 if bidirectional else 1
+        self.call_time_min_val = call_time_min_val
+        self.call_time_max_val = call_time_max_val
 
         self.lstm = nn.LSTM(
             input_size=self.input_dim,
@@ -137,8 +145,10 @@ class LSTM(pl.LightningModule):
 
     def compute_metrics(
         self,
-        predictions: torch.tensor,
-        targets: torch.tensor,
+        label_preds: torch.tensor,
+        label_targets: torch.tensor,
+        time_preds: torch.tensor,
+        time_targets: torch.tensor,
     ) -> Dict[str, Any]:
         """Computes the metrics.
         Parameters
@@ -155,7 +165,7 @@ class LSTM(pl.LightningModule):
         acc_scorer = torchmetrics.Accuracy(
             task="multiclass", num_classes=self.num_classes
         ).to(self.device)
-        accuracy = acc_scorer(predictions, targets)
+        accuracy = acc_scorer(label_preds, label_targets)
 
         f1_micro_scorer = torchmetrics.F1Score(
             task="multiclass",
@@ -163,7 +173,7 @@ class LSTM(pl.LightningModule):
             average="micro",
             num_classes=self.num_classes,
         ).to(self.device)
-        f1_score_micro = f1_micro_scorer(predictions, targets)
+        f1_score_micro = f1_micro_scorer(label_preds, label_targets)
 
         f1_macro_scorer = torchmetrics.F1Score(
             task="multiclass",
@@ -171,13 +181,21 @@ class LSTM(pl.LightningModule):
             average="macro",
             num_classes=self.num_classes,
         ).to(self.device)
-        f1_score_macro = f1_macro_scorer(predictions, targets)
+        f1_score_macro = f1_macro_scorer(label_preds, label_targets)
 
+        mean_absolute_error = torchmetrics.regression.MeanAbsoluteError().to(
+            self.device
+        )
+        time_mae = mean_absolute_error(
+            time_preds[label_targets > 0].squeeze(-1),
+            time_targets[label_targets > 0],
+        ) * (self.call_time_max_val - self.call_time_min_val)
         metrics_dict = dict(
             {
                 "acc": accuracy,
                 "f1_micro": f1_score_micro,
                 "f1_macro": f1_score_macro,
+                "time_mae": time_mae,
             }
         )
         return metrics_dict
@@ -209,7 +227,7 @@ class LSTM(pl.LightningModule):
         self.log("train_loss_reg", loss_reg)
 
         preds = torch.argmax(class_logits, dim=1)
-        train_metrics = self.compute_metrics(preds, label)
+        train_metrics = self.compute_metrics(preds, label, reg_out, r_time)
 
         for key, value in train_metrics.items():
             self.log(f"train_{key}", value)
@@ -270,7 +288,7 @@ class LSTM(pl.LightningModule):
         self.log("val_loss_reg", loss_reg)
 
         preds = torch.argmax(class_logits, dim=1)
-        val_metrics = self.compute_metrics(preds, label)
+        val_metrics = self.compute_metrics(preds, label, reg_out, r_time)
 
         for key, value in val_metrics.items():
             self.log(f"val_{key}", value)
@@ -330,9 +348,9 @@ class LSTM(pl.LightningModule):
         self.log("test_loss_reg", loss_reg)
 
         preds = torch.argmax(class_logits, dim=1)
-        train_metrics = self.compute_metrics(preds, label)
+        test_metrics = self.compute_metrics(preds, label, reg_out, r_time)
 
-        for key, value in train_metrics.items():
+        for key, value in test_metrics.items():
             self.log(f"test_{key}", value)
             output_dict[f"test_{key}"] = value
 
@@ -351,8 +369,13 @@ class LSTM(pl.LightningModule):
         """
         spec = batch["spec"]
         class_logits, reg_out = self.forward(spec)
+        time_pred = (
+            reg_out * (self.call_time_max_val - self.call_time_min_val)
+            + self.call_time_min_val
+        )
+
         preds = torch.argmax(class_logits, dim=1)
-        output_dict = {"label": preds, "time": reg_out}
+        output_dict = {"label": preds, "time": time_pred}
 
         return output_dict
 

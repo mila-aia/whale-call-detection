@@ -70,6 +70,8 @@ def main() -> None:
         bidirectional=args.bidirectional,
         reg_loss_weight=args.reg_loss_weight,
         lr=args.lr,
+        call_time_min_val=whale_dm.target_time_min_val,
+        call_time_max_val=whale_dm.target_time_max_val,
     )
 
     trainer.fit(

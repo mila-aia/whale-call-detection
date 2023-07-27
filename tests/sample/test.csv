@@ -1,2 +1,2 @@
-file_path,time_window_start,time_window_end,time_call_start,time_call_end,R,SNR,group_id,station_code,whale_type,component
-tests/sample/test.SAC,2020-05-01 05:30:10.481539496,2020-05-01 05:30:15.481539496,2020-05-01 05:30:12.323082496,2020-05-01 05:30:13.323082496,2.359922008406841,0.9497539860668874,63,CNQ,fw,EHZ
+file_path,time_window_start,time_window_end,time_call_start,time_R_max,time_call_end,R,SNR,group_id,station_code,whale_type,component
+tests/sample/test.SAC,2020-05-01 05:30:10.481539496,2020-05-01 05:30:15.481539496,2020-05-01 05:30:12.323082496,2020-05-01 05:30:12.823082496,2020-05-01 05:30:13.323082496,2.359922008406841,0.9497539860668874,63,CNQ,fw,EHZ
