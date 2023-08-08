@@ -18,6 +18,7 @@ RUN_NAME="LQ"
 python models/lstm.py \
     --data-path /network/projects/aia/whale_call/LABELS/FWC_3CH_LQ \
     --mlruns-dir /network/projects/aia/whale_call/mlruns \
+    --tracking-uri sqlite:////network/projects/aia/whale_call/mlflow_whale.db \
     --exp-name $EXP_NAME \
     --run-name $RUN_NAME \
     --input-dim 129 \
