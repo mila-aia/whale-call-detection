@@ -21,7 +21,7 @@ def main() -> None:
     epoch_num = args.num_epochs
     metric_to_optimize = args.metric_to_optimize
     mlruns_dir = Path(args.mlruns_dir).expanduser().resolve()
-
+    tracking_uri = args.tracking_uri
     whale_dm = WhaleDataModule(
         data_dir=str(data_path),
         batch_size=batch_size,
@@ -34,6 +34,7 @@ def main() -> None:
 
     exp_logger = CustomMLFLogger(
         experiment_name=experiment_name,
+        tracking_uri=tracking_uri,
         save_dir=str(mlruns_dir),
         run_name=run_name,
         log_model="all",
@@ -171,6 +172,12 @@ def parse_args() -> Namespace:
         default="mlruns/",
         type=str,
         help="path to the MLflow mlruns directory",
+    )
+    arg_parser.add_argument(
+        "--tracking-uri",
+        default=None,
+        type=str,
+        help="MLflow tracking URI",
     )
     arg_parser.add_argument(
         "--data-type",

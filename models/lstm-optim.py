@@ -23,6 +23,7 @@ def main() -> None:
     metric_to_optimize = args.metric_to_optimize
     optimize_direction = args.optimize_direction
     mlruns_dir = Path(args.mlruns_dir).expanduser().resolve()
+    tracking_uri = args.tracking_uri
     optuna_db = Path(args.optuna_db).expanduser().resolve()
     whale_dm = WhaleDataModule(
         data_dir=str(data_path),
@@ -72,6 +73,7 @@ def main() -> None:
 
     exp_logger = CustomMLFLogger(
         experiment_name=f"{experiment_name}",
+        tracking_uri=tracking_uri,
         save_dir=str(mlruns_dir),
         run_name="best_model",
         log_model="all",
