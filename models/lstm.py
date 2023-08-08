@@ -1,5 +1,5 @@
 from whale.data_io.data_loader import WhaleDataModule
-from whale.utils.loggers import CustomMLFLogger
+from pytorch_lightning.loggers import WandbLogger
 from whale.models import LSTM
 from pytorch_lightning import seed_everything, Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
@@ -12,7 +12,6 @@ def main() -> None:
     seed_everything(args.seed)
 
     data_path = Path(args.data_path).expanduser().resolve()
-    experiment_name = args.exp_name
     run_name = args.run_name
     input_dim = args.input_dim
     hidden_dim = args.hidden_dim
@@ -20,8 +19,8 @@ def main() -> None:
     batch_size = args.batch_size
     epoch_num = args.num_epochs
     metric_to_optimize = args.metric_to_optimize
-    mlruns_dir = Path(args.mlruns_dir).expanduser().resolve()
-    tracking_uri = args.tracking_uri
+    save_dir = Path(args.save_dir).expanduser().resolve()
+    save_dir.mkdir(parents=True, exist_ok=True)
     whale_dm = WhaleDataModule(
         data_dir=str(data_path),
         batch_size=batch_size,
@@ -32,13 +31,13 @@ def main() -> None:
     valid_loader = whale_dm.val_dataloader()
     test_loader = whale_dm.test_dataloader()
 
-    exp_logger = CustomMLFLogger(
-        experiment_name=experiment_name,
-        tracking_uri=tracking_uri,
-        save_dir=str(mlruns_dir),
-        run_name=run_name,
+    exp_logger = WandbLogger(
+        project="whale-call-detection",
+        name=run_name,
         log_model="all",
+        save_dir=str(save_dir),
     )
+    exp_logger.experiment.config.update(args)
 
     early_stopper = EarlyStopping(
         monitor=metric_to_optimize, patience=5, mode="min", verbose=True
@@ -168,16 +167,10 @@ def parse_args() -> Namespace:
         help="integer value seed for global random state",
     )
     arg_parser.add_argument(
-        "--mlruns-dir",
-        default="mlruns/",
+        "--save-dir",
+        default="./wandb_log/",
         type=str,
-        help="path to the MLflow mlruns directory",
-    )
-    arg_parser.add_argument(
-        "--tracking-uri",
-        default=None,
-        type=str,
-        help="MLflow tracking URI",
+        help="path to the wandb logging directory",
     )
     arg_parser.add_argument(
         "--data-type",
