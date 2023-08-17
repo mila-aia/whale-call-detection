@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=baselines_lstm_call_level_class_reg_3CH_HQ
+#SBATCH --job-name=baselines_lstm_call_level_class_reg_bwc_3CH_HQ
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --gres gpu:1
@@ -17,8 +17,7 @@ RUN_NAME="HQ"
 
 python models/lstm.py \
     --data-path /network/projects/aia/whale_call/LABELS/BWC_3CH_HQ \
-    --mlruns-dir /network/projects/aia/whale_call/mlruns \
-    --tracking-uri sqlite:////network/projects/aia/whale_call/mlflow_whale.db \
+    --save-dir /network/projects/aia/whale_call/wandb_log \
     --exp-name $EXP_NAME \
     --run-name $RUN_NAME \
     --input-dim 129 \

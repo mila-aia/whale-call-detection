@@ -1,3 +1,6 @@
+[![license](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://github.com/mila-aia/ner/blob/main/LICENSE)
+[![ci-pipeline](https://github.com/mila-aia/whale-call-detection/actions/workflows/ci_pipeline.yml/badge.svg)](https://github.com/mila-aia/whale-call-detection/actions/workflows/ci_pipeline.yml)
+
 # Whale Call Detection 
 [__Setup__](#setup)
 | [__Data__](#data)

@@ -12,6 +12,8 @@ def main() -> None:
     seed_everything(args.seed)
 
     data_path = Path(args.data_path).expanduser().resolve()
+    project_name = args.project
+    experiment_name = args.exp_name
     run_name = args.run_name
     input_dim = args.input_dim
     hidden_dim = args.hidden_dim
@@ -32,9 +34,10 @@ def main() -> None:
     test_loader = whale_dm.test_dataloader()
 
     exp_logger = WandbLogger(
-        project="whale-call-detection",
+        project=project_name,
+        group=experiment_name,
         name=run_name,
-        log_model="all",
+        log_model=False,  # avoid uploading the model to wandb
         save_dir=str(save_dir),
     )
     exp_logger.experiment.config.update(args)
@@ -47,7 +50,7 @@ def main() -> None:
         mode="min",
         auto_insert_metric_name=True,
         save_on_train_epoch_end=True,
-        save_top_k=2,
+        save_top_k=1,
     )
 
     trainer = Trainer(
@@ -86,17 +89,28 @@ def parse_args() -> Namespace:
         description=description, formatter_class=ArgumentDefaultsHelpFormatter
     )
     arg_parser.add_argument(
+        "--project",
+        default="whale-call-detection",
+        type=str,
+        help="name of the project",
+    )
+    arg_parser.add_argument(
         "--exp-name",
         default="test_exp",
         type=str,
-        help="name of the MLflow experiment",
+        help="name of the experiment",
     )
-
     arg_parser.add_argument(
         "--run-name",
         default="test_run",
         type=str,
         help="name of the MLflow run",
+    )
+    arg_parser.add_argument(
+        "--save-dir",
+        default="./wandb_log/",
+        type=str,
+        help="path to the wandb logging directory",
     )
     arg_parser.add_argument(
         "--data-path",
@@ -165,12 +179,6 @@ def parse_args() -> Namespace:
         default=1234,
         type=int,
         help="integer value seed for global random state",
-    )
-    arg_parser.add_argument(
-        "--save-dir",
-        default="./wandb_log/",
-        type=str,
-        help="path to the wandb logging directory",
     )
     arg_parser.add_argument(
         "--data-type",

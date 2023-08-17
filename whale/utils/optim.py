@@ -4,7 +4,7 @@ from optuna.trial import Trial
 from pytorch_lightning import Trainer
 from whale.models import LSTM
 from pytorch_lightning.callbacks import EarlyStopping
-from pytorch_lightning.loggers import MLFlowLogger
+from pytorch_lightning.loggers import WandbLogger
 import numpy as np
 from typing import Literal
 from torch.utils.data import DataLoader
@@ -54,6 +54,7 @@ class LSTMTuningObjective:
         epoch_num: int = 20,
         train_loader: DataLoader = None,
         valid_loader: DataLoader = None,
+        project_name: str = None,
         experiment_name: str = None,
         save_dir: str = None,
         direction: Literal["minimize", "maximize"] = "minimize",
@@ -65,6 +66,7 @@ class LSTMTuningObjective:
         self.hparams_space = hparams_space
         self.train_loader = train_loader
         self.valid_loader = valid_loader
+        self.project_name = project_name
         self.experiment_name = experiment_name
         self.save_dir = save_dir
         self.direction = direction
@@ -88,10 +90,12 @@ class LSTMTuningObjective:
             verbose=True,
         )
 
-        _logger = MLFlowLogger(
-            experiment_name=self.experiment_name,
+        _logger = WandbLogger(
+            project=self.project_name,
+            group=self.experiment_name,
+            log_model=False,  # avoid uploading the model to wandb
             save_dir=self.save_dir,
-            run_name=f"trial_{trial.number}",
+            name=f"trial_{trial.number}",
         )
 
         trainer = Trainer(
