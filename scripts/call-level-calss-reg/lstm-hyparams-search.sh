@@ -27,5 +27,5 @@ python models/lstm-optim.py \
     --hparams-space ./hparams/call-level-class-reg-lstm.yaml \
     --metric-to-optimize overall_val_loss \
     --optimize-direction minimize \
-    --n-trials 5 \
+    --n-trials 20 \
     --optuna-db /network/projects/aia/whale_call/optuna/$EXP_NAME.sqlite3

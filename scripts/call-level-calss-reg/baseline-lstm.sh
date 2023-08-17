@@ -11,13 +11,14 @@
 
 module --quiet load anaconda/3
 conda activate whale
+PROJECT="whale-call-detection"
 EXP_NAME="call-level-class-reg"
 RUN_NAME="baseline_lstm_run"
 python models/lstm.py \
-    --data-path /network/projects/aia/whale_call/LABELS/fw_HQ_filt_mixed \
-    --mlruns-dir /network/projects/aia/whale_call/mlruns \
+    --project $PROJECT \
     --exp-name $EXP_NAME \
-    --run-name $RUN_NAME \
+    --save-dir /network/projects/aia/whale_call/wandb_log/$PROJECT/$EXP_NAME \
+    --data-path /network/projects/aia/whale_call/LABELS/fw_HQ_filt_mixed \
     --input-dim 129 \
     --hidden-dim 128 \
     --num-layers 3 \
