@@ -24,6 +24,34 @@ cd whale-call-detection
 conda activate whale
 pre-commit install
 ```
+### Installation (Docker)
+1. Download and install [docker](https://www.docker.com/).
+2. Execute the following commands to install all software requirements to a Docker image:
+```
+cd whale-call-detection
+docker build -t whale-call-detection .
+```
+The following commands will mount the current source code and provide access to the docker container's terminal:
+```
+cd whale-call-detection
+docker run -it --rm \
+    -v `pwd`:/home/ner \
+    -p 5000:5000 \
+    -p 8888:8888 \
+    ner \
+    /bin/bash
+```
+### Using the GPU from inside the Docker container
+To use the GPU from within the Docker container, make sure to install [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) and set the Docker `runtime` to `nvidia`. For example:
+```
+cd whale-call-detection
+docker run -it --rm --runtime=nvidia \
+    -v `pwd`:/home/ner \
+    -p 5000:5000 \
+    -p 8888:8888 \
+    ner \
+    /bin/bash
+```
 
 ## Data
 ### Availability
