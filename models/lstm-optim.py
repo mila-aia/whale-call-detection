@@ -7,7 +7,7 @@ from pytorch_lightning import seed_everything, Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pathlib import Path
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter, Namespace
-from whale.utils.loggers import CustomMLFLogger
+from pytorch_lightning.loggers import WandbLogger
 
 
 def main() -> None:
@@ -15,14 +15,17 @@ def main() -> None:
     seed_everything(args.seed)
 
     data_path = Path(args.data_path).expanduser().resolve()
+
     hparams_space = read_yaml(Path(args.hparams_space).expanduser().resolve())
+    project_name = args.project
     experiment_name = args.exp_name
     batch_size = args.batch_size
     search_epoch_num = args.search_num_epochs
     epoch_num = args.num_epochs
     metric_to_optimize = args.metric_to_optimize
     optimize_direction = args.optimize_direction
-    mlruns_dir = Path(args.mlruns_dir).expanduser().resolve()
+    save_dir = Path(args.save_dir).expanduser().resolve()
+    save_dir.mkdir(parents=True, exist_ok=True)
     optuna_db = Path(args.optuna_db).expanduser().resolve()
     whale_dm = WhaleDataModule(
         data_dir=str(data_path),
@@ -41,8 +44,9 @@ def main() -> None:
         train_loader=train_loader,
         valid_loader=valid_loader,
         hparams_space=hparams_space,
+        project_name=project_name,
         experiment_name=f"{experiment_name}",
-        save_dir=str(mlruns_dir),
+        save_dir=str(save_dir),
         direction=optimize_direction,
         metric_to_optimize=metric_to_optimize,
     )
@@ -70,13 +74,13 @@ def main() -> None:
         lr=best_model_conf["lr"],
     )
 
-    exp_logger = CustomMLFLogger(
-        experiment_name=f"{experiment_name}",
-        save_dir=str(mlruns_dir),
-        run_name="best_model",
-        log_model="all",
+    exp_logger = WandbLogger(
+        project=project_name,
+        group=args.exp_name,
+        name="best_model",
+        log_model=False,  # avoid uploading the model to wandb
+        save_dir=str(save_dir),
     )
-
     early_stopper = EarlyStopping(
         monitor=metric_to_optimize,
         patience=2,
@@ -126,16 +130,22 @@ def parse_args() -> Namespace:
         help="integer value seed for global random state",
     )
     arg_parser.add_argument(
+        "--project",
+        default="whale-call-detection",
+        type=str,
+        help="name of the project",
+    )
+    arg_parser.add_argument(
         "--exp-name",
         default="test_exp",
         type=str,
-        help="name of the MLflow experiment",
+        help="name of the experiment",
     )
     arg_parser.add_argument(
-        "--mlruns-dir",
-        default="mlruns/",
+        "--save-dir",
+        default="./wandb_log/",
         type=str,
-        help="path to the MLflow mlruns directory",
+        help="path to the wandb logging directory",
     )
     arg_parser.add_argument(
         "--input-dim",

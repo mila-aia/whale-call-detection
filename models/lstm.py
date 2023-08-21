@@ -1,5 +1,5 @@
 from whale.data_io.data_loader import WhaleDataModule
-from whale.utils.loggers import CustomMLFLogger
+from pytorch_lightning.loggers import WandbLogger
 from whale.models import LSTM
 from pytorch_lightning import seed_everything, Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
@@ -12,6 +12,7 @@ def main() -> None:
     seed_everything(args.seed)
 
     data_path = Path(args.data_path).expanduser().resolve()
+    project_name = args.project
     experiment_name = args.exp_name
     run_name = args.run_name
     input_dim = args.input_dim
@@ -20,8 +21,8 @@ def main() -> None:
     batch_size = args.batch_size
     epoch_num = args.num_epochs
     metric_to_optimize = args.metric_to_optimize
-    mlruns_dir = Path(args.mlruns_dir).expanduser().resolve()
-
+    save_dir = Path(args.save_dir).expanduser().resolve()
+    save_dir.mkdir(parents=True, exist_ok=True)
     whale_dm = WhaleDataModule(
         data_dir=str(data_path),
         batch_size=batch_size,
@@ -32,12 +33,14 @@ def main() -> None:
     valid_loader = whale_dm.val_dataloader()
     test_loader = whale_dm.test_dataloader()
 
-    exp_logger = CustomMLFLogger(
-        experiment_name=experiment_name,
-        save_dir=str(mlruns_dir),
-        run_name=run_name,
-        log_model="all",
+    exp_logger = WandbLogger(
+        project=project_name,
+        group=experiment_name,
+        name=run_name,
+        log_model=False,  # avoid uploading the model to wandb
+        save_dir=str(save_dir),
     )
+    exp_logger.experiment.config.update(args)
 
     early_stopper = EarlyStopping(
         monitor=metric_to_optimize, patience=5, mode="min", verbose=True
@@ -47,7 +50,7 @@ def main() -> None:
         mode="min",
         auto_insert_metric_name=True,
         save_on_train_epoch_end=True,
-        save_top_k=2,
+        save_top_k=1,
     )
 
     trainer = Trainer(
@@ -86,17 +89,28 @@ def parse_args() -> Namespace:
         description=description, formatter_class=ArgumentDefaultsHelpFormatter
     )
     arg_parser.add_argument(
+        "--project",
+        default="whale-call-detection",
+        type=str,
+        help="name of the project",
+    )
+    arg_parser.add_argument(
         "--exp-name",
         default="test_exp",
         type=str,
-        help="name of the MLflow experiment",
+        help="name of the experiment",
     )
-
     arg_parser.add_argument(
         "--run-name",
         default="test_run",
         type=str,
         help="name of the MLflow run",
+    )
+    arg_parser.add_argument(
+        "--save-dir",
+        default="./wandb_log/",
+        type=str,
+        help="path to the wandb logging directory",
     )
     arg_parser.add_argument(
         "--data-path",
@@ -165,12 +179,6 @@ def parse_args() -> Namespace:
         default=1234,
         type=int,
         help="integer value seed for global random state",
-    )
-    arg_parser.add_argument(
-        "--mlruns-dir",
-        default="mlruns/",
-        type=str,
-        help="path to the MLflow mlruns directory",
     )
     arg_parser.add_argument(
         "--data-type",

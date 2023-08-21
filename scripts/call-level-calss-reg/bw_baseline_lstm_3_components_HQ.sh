@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=baselines_lstm_call_level_class_reg_3CH_HQ
+#SBATCH --job-name=baselines_lstm_call_level_class_reg_bwc_3CH_HQ
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --gres gpu:1
@@ -12,12 +12,14 @@
 module --quiet load anaconda/3
 conda activate whale
 
+PROJECT="whale-call-detection"
 EXP_NAME="BW-3-comp-call-level-class-reg"
 RUN_NAME="HQ"
 
 python models/lstm.py \
     --data-path /network/projects/aia/whale_call/LABELS/BWC_3CH_HQ \
-    --mlruns-dir /network/projects/aia/whale_call/mlruns_2 \
+    --save-dir /network/projects/aia/whale_call/wandb_log/$PROJECT/$EXP_NAME \
+    --project $PROJECT \
     --exp-name $EXP_NAME \
     --run-name $RUN_NAME \
     --input-dim 129 \

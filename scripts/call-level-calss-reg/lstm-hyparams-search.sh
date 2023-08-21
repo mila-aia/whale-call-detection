@@ -11,17 +11,19 @@
 
 module --quiet load anaconda/3
 conda activate whale
+PROJECT="whale-call-detection"
 EXP_NAME="call-level-class-reg-lstm-fw_HQ_filt_mixed"
 DATA_PATH="/network/projects/aia/whale_call/LABELS/fw_HQ_filt_mixed"
 python models/lstm-optim.py \
+    --project $PROJECT \
     --exp-name $EXP_NAME \
-    --mlruns-dir /network/projects/aia/whale_call/mlruns/ \
+    --save-dir /network/projects/aia/whale_call/wandb_log/$PROJECT/$EXP_NAME \
     --data-path $DATA_PATH \
     --num-classes 2 \
     --batch-size 64 \
     --input-dim 129 \
-    --search-num-epochs 15 \
-    --num-epochs 30 \
+    --search-num-epochs 2 \
+    --num-epochs 4 \
     --hparams-space ./hparams/call-level-class-reg-lstm.yaml \
     --metric-to-optimize overall_val_loss \
     --optimize-direction minimize \
