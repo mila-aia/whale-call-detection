@@ -22,8 +22,8 @@ python models/lstm-optim.py \
     --num-classes 2 \
     --batch-size 64 \
     --input-dim 129 \
-    --search-num-epochs 2 \
-    --num-epochs 4 \
+    --search-num-epochs 10 \
+    --num-epochs 30 \
     --hparams-space ./hparams/call-level-class-reg-lstm.yaml \
     --metric-to-optimize overall_val_loss \
     --optimize-direction minimize \

@@ -5,9 +5,9 @@ from pytorch_lightning import Trainer
 from whale.models import LSTM
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
-import numpy as np
 from typing import Literal
 from torch.utils.data import DataLoader
+import wandb
 
 
 def read_yaml(yaml_fp: Path) -> dict:
@@ -97,6 +97,7 @@ class LSTMTuningObjective:
             save_dir=self.save_dir,
             name=f"trial_{trial.number}",
         )
+        wandb.init(project=self.project_name, name=f"trial_{trial.number}")
 
         trainer = Trainer(
             max_epochs=self.epoch_num,
@@ -115,15 +116,24 @@ class LSTMTuningObjective:
             train_dataloaders=self.train_loader,
             val_dataloaders=self.valid_loader,
         )
-        metric_history = _logger.experiment.get_metric_history(
-            _logger.run_id, self.metric_to_optimize
-        )
-        metric_history_array = np.array(
-            [metric_value.value for metric_value in metric_history]
-        )
-        # get the best value of the metric from metric history
-        if self.direction == "minimize":
-            metric_to_optimize = metric_history_array.min()
-        elif self.direction == "maximize":
-            metric_to_optimize = metric_history_array.max()
+
+        # get the metric to optimize from the experiment summary
+        # in wandb, this value is the last value.
+        metric_to_optimize = _logger.experiment.summary[
+            self.metric_to_optimize
+        ]
+
+        # The following code is for mlflow
+        # metric_history = _logger.experiment.get_metric_history(
+        #     _logger.run_id, self.metric_to_optimize
+        # )
+        # metric_history_array = np.array(
+        #     [metric_value.value for metric_value in metric_history]
+        # )
+        # # get the best value of the metric from metric history
+        # if self.direction == "minimize":
+        #     metric_to_optimize = metric_history_array.min()
+        # elif self.direction == "maximize":
+        #     metric_to_optimize = metric_history_array.max()
+        wandb.finish()
         return metric_to_optimize
