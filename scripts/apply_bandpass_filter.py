@@ -45,7 +45,7 @@ def parse_args() -> Namespace:
 
     arg_parser.add_argument(
         "--input-sac-files",
-        default="/network/projects/aia/whale_call/SAC_FILES_RAW.txt",
+        default="data/SAC_FILES_RAW.txt",
         type=str,
         help="path to a .txt file including a list of SAC files"
         + " to be filtered.",
@@ -53,7 +53,7 @@ def parse_args() -> Namespace:
 
     arg_parser.add_argument(
         "--output-dir",
-        default="data/",
+        default="data/FILT_10_32/",
         type=str,
         help="path to the save filtered SAC file",
     )
