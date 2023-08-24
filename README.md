@@ -68,7 +68,7 @@ Script for downloading seismic data from CN ftp serverThe data is in MSEED forma
 optional arguments:
   -h, --help            show this help message and exit
   --output-dir OUTPUT_DIR
-                        path to the output directory (default: data/)
+                        path to the output directory (default: data/RAW/)
   --start-date START_DATE
                         the starting date (yyyy-mm-dd) of the request window (default: None)
   --end-date END_DATE   the starting date (yyyy-mm-dd) of the request window (default: None)
@@ -76,10 +76,10 @@ optional arguments:
   --channels CHANNELS   the channels requested (seperated by comma) (default: HHE,HHN,HHZ,HNE,HNN,HNZ,EHZ)
 ```
 
-The next steps involves running the following command to list the paths to all raw sac files.
+The next step involves running the following command to list the paths to all raw sac files.
 
 ```
-find data/ -name '*.SAC' -print > data/SAC_FILES_RAW.txt.txt
+find data/RAW/ -name '*.SAC' -print > data/SAC_FILES_RAW.txt
 ```
 
 ### Pre-processing
@@ -101,9 +101,15 @@ optional arguments:
   --input-sac-files INPUT_SAC_FILES
                         path to a .txt file including a list of SAC files to be filtered. (default: data/SAC_FILES_RAW.txt)
   --output-dir OUTPUT_DIR
-                        path to the save filtered SAC file (default: data/)
+                        path to the save filtered SAC file (default: data/FILT_10_32/)
   --freq-min FREQ_MIN   low frequency of the bandpass filter (default: 10)
   --freq-max FREQ_MAX   high frequency of the bandpass filter (default: 32)
+```
+
+The next step involves running the following command to list the paths to all filtered sac files.
+
+```
+find data/FILT_10_32/ -name '*.SAC' -print > data/SAC_FILES_FILT.txt
 ```
 
 ###### Remove raw data files with issues 
