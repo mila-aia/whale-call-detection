@@ -113,7 +113,7 @@ def parse_args() -> Namespace:
 
     arg_parser.add_argument(
         "--output-dir",
-        default="data/",
+        default="data/RAW/",
         type=str,
         help="path to the output directory",
     )

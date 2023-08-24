@@ -247,9 +247,7 @@ def read_list_raw_files(sac_file_path: str) -> pd.DataFrame:
 def pass_checks(list_files: pd.DataFrame) -> pd.DataFrame:
 
     # Load dataframe containing all statistics
-    stats_df = pd.read_csv(
-        "/network/projects/aia/whale_call/ISSUES/file_stats.csv"
-    )
+    stats_df = pd.read_csv("data/ISSUES/file_stats.csv")
 
     # Reformat data
     stats_df["starttime"] = pd.to_datetime(
@@ -278,12 +276,8 @@ def pass_checks(list_files: pd.DataFrame) -> pd.DataFrame:
     ].filename.values
 
     # REMOVE FILES WITH NULL VALUES
-    blue_whales_prblms = pd.read_csv(
-        "/network/projects/aia/whale_call/ISSUES/bw_0_values.csv"
-    )
-    fin_whales_prblms = pd.read_csv(
-        "/network/projects/aia/whale_call/ISSUES/fw_0_values.csv"
-    )
+    blue_whales_prblms = pd.read_csv("data/ISSUES/bw_0_values.csv")
+    fin_whales_prblms = pd.read_csv("data/ISSUES/fw_0_values.csv")
 
     list_problematics_files = np.concatenate(
         (
@@ -324,9 +318,25 @@ def main() -> None:
         param_data = yaml.safe_load(file)
 
     # Output
-    labels_output = Path(param_data["paths"]["whale_data_cluster"]) / "LABELS"
+    labels_output = Path("data") / "LABELS"
+    bw_labels_output = labels_output / "BW"
+    fw_labels_output = labels_output / "FW"
+    bw_labels_output_mixed = labels_output / "BW" / "MIXED"
+    fw_labels_output_mixed = labels_output / "FW" / "MIXED"
 
     labels_output.mkdir(
+        parents=True, exist_ok=True
+    )  # Create folder if not exist
+    fw_labels_output.mkdir(
+        parents=True, exist_ok=True
+    )  # Create folder if not exist
+    bw_labels_output.mkdir(
+        parents=True, exist_ok=True
+    )  # Create folder if not exist
+    bw_labels_output_mixed.mkdir(
+        parents=True, exist_ok=True
+    )  # Create folder if not exist
+    fw_labels_output_mixed.mkdir(
         parents=True, exist_ok=True
     )  # Create folder if not exist
 
@@ -361,11 +371,11 @@ def main() -> None:
         # Get list of files in dataframe
         if bandpass_filter == "True":
             list_files_detailled = read_list_raw_files(
-                "/network/projects/aia/whale_call/SAC_FILES_FILT.txt"
+                "data/SAC_FILES_FILT.txt"
             )
         else:
             list_files_detailled = read_list_raw_files(
-                "/network/projects/aia/whale_call/SAC_FILES_RAW.txt"
+                "data/SAC_FILES_RAW.txt"
             )
 
         # Get only the name of the files
@@ -485,9 +495,7 @@ def main() -> None:
 
             # Check to see if window date start and end on same day
             # Load dataset with stats per file
-            stats_df = pd.read_csv(
-                "/network/projects/aia/whale_call/ISSUES/file_stats.csv"
-            )
+            stats_df = pd.read_csv("data/ISSUES/file_stats.csv")
             # Convert datetimes
             stats_df["starttime"] = pd.to_datetime(
                 stats_df["starttime"]
@@ -708,8 +716,7 @@ def parse_args() -> Namespace:
 
     arg_parser.add_argument(
         "--input_file",
-        default="/network/projects/aia/whale_call/"
-        + "MATLAB_OUTPUT/WhaleDetectionsLSZ_new_cp.mat",
+        default="data/WhaleDetections_matlab_output.mat",
         type=str,
         help="path to the input file",
     )
