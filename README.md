@@ -19,7 +19,7 @@ This repository implements a framework to detect whale calls embedded in seismic
 <div align="center">
     <img src="docs/figs/overview.png" width="65%">
     <div>
-    Figure 1. An overview of the framework. The data shown here is a sample of a blue whale call detected on seismic station PMAQ and the timestamp of this call is '2021-10-02 07:13:33.02'.  </div>
+    Figure 1. An overview of the framework. The seismic data shown here is a sample of a blue whale call detected on station PMAQ and the timestamp of this call is '2021-10-02 07:13:33.02'. The waveform has been filtered with a  band pass filter [10, 32] HZ.</div>
 </div>
 
 ## Setup
@@ -94,13 +94,55 @@ The format of directory used to initialize an instance of `WhaleDataModule` is:
     ├── test.csv
 ```
 
+Here is the dataset dictionary:
+
+Column | Explanation | Type | Example
+--- | --- | --- | ----|
+`file_path`|path to the `.SAC` file with its `component` replaced with `CHANNEL` | `str`| `/root_data_dir/20210822/2021.08.22.CN.SNFQ..CHANNEL.SAC`
+`time_window_start` | signal window start time |`str`| `2021-08-22 05:56:45.38`
+`time_window_end` | signal window end time | `str`|`2021-08-22 05:57:01.38`
+`time_R_max` | target call time, i.e. the time with the maximum whale index (R) value |`str`| `2021-08-22 05:56:54.01`
+`time_call_start` | the start time of a whale call ($\sim$ 1s for fin whale calls and $\sim$ 8s for blue whale calls) |`str`| `2021-08-22 05:56:50.01`
+`time_call_end` | the end time of a whale call ($\sim$ 1s for fin whale calls and $\sim$ 8s for blue whale calls)  | `str`|`2021-08-22 05:56:58.01`
+`R` | the whale call index value (fixed as `0.0` for noise samples) | `float`|`19.7`
+`SNR` | the signal-to-noise ratio of the whale call (fixed as `-99.0` for noise samples | `float` |`21.22`
+`station_code` | station where the signal is detected | `str` | `SNFQ`
+`whale_type` | type of signal (`0` for noise samples and `1` for a whale call | `int` | 1
+`component` | list of components separated by space available for given station | `str` | `HHE HHN HHZ`
+
 ### Training
 To train a Long shot-term memory (LSTM) network, please check [LSTM](docs/lstm.md) for more details.
 
-### Making predictions (TODO)
+### Making predictions 
 To make prediction using a trained model: 
 
-### WandB experiment logging (TODO)
+```
+python scripts/predict.py -h
+usage: predict.py [-h] [--model-ckpt MODEL_CKPT] [--inp-csv INP_CSV] [--out-csv OUT_CSV]
+                  [--batch-size BATCH_SIZE]
+
+Make prediction using a pretrained model
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --model-ckpt MODEL_CKPT
+                        path to the pretrained model checkpoint (default: model.ckpt)
+  --inp-csv INP_CSV     path to the input csv file (default: samples.csv)
+  --out-csv OUT_CSV     path to the predictions csv file (default: predictions.csv)
+  --batch-size BATCH_SIZE
+                        batch size for prediction (default: 16)
+```
+The `samples.csv` has 4 columns: [`file_path`,`time_window_start`,`time_window_end`,`component`].
+\
+The `predictions.csv` has 6 columns: [ `file_path`,`time_window_start`,`time_window_end`,`component`,`label_pred`,`time_pred`].
+
+
+### WandB experiment logging
+Experiments are tracked using Weighs&Biases (wandb). 
+\
+Before you get started, make sure you create a free  account at https://wandb.ai/site and then login to your wandb account. Please check this [quickstart](https://docs.wandb.ai/quickstart) for more details.
+\
+The hisory of experiments can be then visualized in your online W&B dashboard.
 
 ### Consulting Optuna logs
 Optuna logs from a `optuna.sqlite3` database located in the current directory can be consulted as follow:
