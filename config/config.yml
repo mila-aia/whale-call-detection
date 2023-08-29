@@ -21,6 +21,6 @@ whale_constant:
     stadir_name: stadir_bw
 
 paths:
-  whale_data_cluster: /network/projects/aia/whale_call
-  list_sac_files: /network/projects/aia/whale_call/SAC_FILES_RAW.txt
-  mat_file: /network/projects/aia/whale_call/MATLAB_OUTPUT/WhaleDetectionsLSZ_new.mat
+  whale_data_cluster: data/
+  list_sac_files: data/SAC_FILES_RAW.txt
+  mat_file: data/WhaleDetections_matlab_output.mat
