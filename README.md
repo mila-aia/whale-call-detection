@@ -127,6 +127,7 @@ optional arguments:
 
 The dataset is split into 3 subsets using the same random seed: 80\% for the training set, 10\% for the validation set, and 10\% for the test set.
 
+## Usage
 ### Training
 To train a Long shot-term memory (LSTM) network, please check [LSTM](docs/lstm.md) for more details.
 
