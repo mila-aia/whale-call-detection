@@ -1,17 +1,33 @@
 [![license](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://github.com/mila-aia/ner/blob/main/LICENSE)
+[![python](https://img.shields.io/badge/Python-3.9-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![mypy checked](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 [![ci-pipeline](https://github.com/mila-aia/whale-call-detection/actions/workflows/ci_pipeline.yml/badge.svg)](https://github.com/mila-aia/whale-call-detection/actions/workflows/ci_pipeline.yml)
 
 # Whale Call Detection 
-[__Setup__](#setup)
+[__Overview__](#overview)
+| [__Setup__](#setup)
 | [__Data__](#data)
 | [__Usage__](#usage)
+| [__Licenses__](#licenses)
 
-This project uses Deep Learning techniques to improve whale call detection procedures based on public seismograph data. We focus on the call detections of the endangered species of Blue Whales and Fin Whales in the Lower St-Lawrence Seaway.
+## Overview
+This repository implements a framework to detect whale calls embedded in seismic waveforms. Based on seismic waveform spectrogram, the algorithm performs the following two tasks: 
+1. recognizing the presence of whale calls (*classification task*) 
+2. predicting call time if recognized (*regression task*).
+<div align="center">
+    <img src="docs/figs/overview.png" width="65%">
+    <div>
+    Figure 1. An overview of the framework. The seismic data shown here is a sample of a blue whale call detected on station PMAQ and the timestamp of this call is '2021-10-02 07:13:33.02'. The waveform has been filtered with a  band pass filter [10, 32] HZ.</div>
+</div>
 
 ## Setup
+
 ### Installation
 1. Download and install the latest [Anaconda Python distribution](https://www.anaconda.com/distribution/#download-section)
-2. Execute the following commands to install all software requirements:
+2. Download and uncompress the repository [here](https://github.com/mila-aia/whale-call-detection/archive/refs/heads/main.zip).
+3. Execute the following commands to install all software requirements:
 ```
 cd whale-call-detection
 conda env create
@@ -54,61 +70,79 @@ docker run -it --rm --runtime=nvidia \
 ```
 
 ## Data
-### Availability
-The seismic data used in this study is publicly available via Natural Resoures Canada's FTP server: `ftp://ftp.seismo.nrcan.gc.ca/`. We also prepare a scrcipt for data access.
+The raw seismic data used in this study is publicly available via Natural Resoures Canada's FTP server: `ftp://ftp.seismo.nrcan.gc.ca/`. The labels (blue and fin whale calls) are generated using the algorithm and code developed by [Plourde and Nedimovic [2022]](https://d197for5662m48.cloudfront.net/documents/publicationstatus/118893/preprint_pdf/1fb191babdbd9d518829ce1e5282a4bd.pdf). For more details on data availability and preprocesing, please check this [documentation](docs/data.md).
 
+The directory format of processed waveform data is:
 ```
-python scripts/download_data_ftp.py --h
-usage: download_data_ftp.py [-h] [--output-dir OUTPUT_DIR] [--start-date START_DATE] [--end-date END_DATE] [--stations STATIONS] [--channels CHANNELS]
-
-Script for downloading seismic data from CN ftp serverThe data is in MSEED format.
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --output-dir OUTPUT_DIR
-                        path to the output directory (default: data/)
-  --start-date START_DATE
-                        the starting date (yyyy-mm-dd) of the request window (default: None)
-  --end-date END_DATE   the starting date (yyyy-mm-dd) of the request window (default: None)
-  --stations STATIONS   the stations requested (seperated by comma) (default: PMAQ,ICQ,SNFQ,RISQ,SMQ,CNQ)
-  --channels CHANNELS   the channels requested (seperated by comma) (default: HHE,HHN,HHZ,HNE,HNN,HNZ,EHZ)
+├── root_data_dir/
+│   ├── 20200201/
+│   │   ├── 2021.06.06.CN.CNQ..EHZ.SAC
+        ├── 2021.06.06.CN.ICQ..HHE.SAC
+        ├── ...
+│   ├── 20200202/
+│   │   ├── 2020.02.02.CN.CNQ..EHZ.SAC
+        ├──2020.02.02.CN.ICQ..HHE.SAC
+        ├── ...
+│   ├── ...
+│   │
 ```
-
-### Pre-processing
-
-#### Labels
-The labels are generated using a matlab code. The output of this code is a matrix saved in a .mat format.
-This script reads this matrix and converts the labels (date of calls, time of calls, station monitored, whale type) to the correct format.
-
-You can choose if you want to apply a bandpass filter to the raw data by setting the flag `--bandpass_filter` to `True` or `False`.
-
-The output are 8 possible CSVs in the `/network/projects/aia/whale_call/LABELS` folder:
-
-`BW/`:
-`bw_component_grouped_filt.csv`  `bw_filt.csv`
-`bw_component_grouped_raw.csv`   `bw_raw.csv`
-
-`FW/`:
-`fw_component_grouped_filt.csv`  `fw_filt.csv`
-`fw_component_grouped_raw.csv`   `fw_raw.csv`
-
+The format of directory used to initialize an instance of `WhaleDataModule` is:
 ```
-usage: preprocess_labels.py [-h] [--output_dir OUTPUT_DIR] [--input_file INPUT_FILE]
-
-Script for preprocessing the labels coming from .mat matrix
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --input_file INPUT_FILE
-                        path to the input file (default: /network/projects/aia/whale_call/MATLAB_OUTPUT/WhaleDetectionsLSZ_new.mat)
+├── root_data_dir/
+    ├── train.csv
+    ├── valid.csv
+    ├── test.csv
 ```
 
-## Usage
+Here is the dataset dictionary:
+
+Column | Explanation | Type | Example
+--- | --- | --- | ----|
+`file_path`|path to the `.SAC` file with its `component` replaced with `CHANNEL` | `str`| `/root_data_dir/20210822/2021.08.22.CN.SNFQ..CHANNEL.SAC`
+`time_window_start` | signal window start time |`str`| `2021-08-22 05:56:45.38`
+`time_window_end` | signal window end time | `str`|`2021-08-22 05:57:01.38`
+`time_R_max` | target call time, i.e. the time with the maximum whale index (R) value |`str`| `2021-08-22 05:56:54.01`
+`time_call_start` | the start time of a whale call ($\sim$ 1s for fin whale calls and $\sim$ 8s for blue whale calls) |`str`| `2021-08-22 05:56:50.01`
+`time_call_end` | the end time of a whale call ($\sim$ 1s for fin whale calls and $\sim$ 8s for blue whale calls)  | `str`|`2021-08-22 05:56:58.01`
+`R` | the whale call index value (fixed as `0.0` for noise samples) | `float`|`19.7`
+`SNR` | the signal-to-noise ratio of the whale call (fixed as `-99.0` for noise samples | `float` |`21.22`
+`station_code` | station where the signal is detected | `str` | `SNFQ`
+`whale_type` | type of signal (`0` for noise samples and `1` for a whale call | `int` | 1
+`component` | list of components separated by space available for given station | `str` | `HHE HHN HHZ`
 
 ### Training
+To train a Long shot-term memory (LSTM) network, please check [LSTM](docs/lstm.md) for more details.
 
-- [LSTM](docs/lstm.md)
+### Making predictions 
+To make prediction using a trained model: 
 
+```
+python scripts/predict.py -h
+usage: predict.py [-h] [--model-ckpt MODEL_CKPT] [--inp-csv INP_CSV] [--out-csv OUT_CSV]
+                  [--batch-size BATCH_SIZE]
+
+Make prediction using a pretrained model
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --model-ckpt MODEL_CKPT
+                        path to the pretrained model checkpoint (default: model.ckpt)
+  --inp-csv INP_CSV     path to the input csv file (default: samples.csv)
+  --out-csv OUT_CSV     path to the predictions csv file (default: predictions.csv)
+  --batch-size BATCH_SIZE
+                        batch size for prediction (default: 16)
+```
+The `samples.csv` has 4 columns: [`file_path`,`time_window_start`,`time_window_end`,`component`].
+\
+The `predictions.csv` has 6 columns: [ `file_path`,`time_window_start`,`time_window_end`,`component`,`label_pred`,`time_pred`].
+
+
+### WandB experiment logging
+Experiments are tracked using Weighs&Biases (wandb). 
+\
+Before you get started, make sure you create a free  account at https://wandb.ai/site and then login to your wandb account. Please check this [quickstart](https://docs.wandb.ai/quickstart) for more details.
+\
+The hisory of experiments can be then visualized in your online W&B dashboard.
 
 ### Consulting Optuna logs
 Optuna logs from a `optuna.sqlite3` database located in the current directory can be consulted as follow:
@@ -119,3 +153,30 @@ Otherwise, Optuna logs can be consulted as follow:
 ```
 optuna-dashboard sqlite:///ABSOLUTE_PATH_TO_OPTUNA.SQLITE3_FILE
 ```
+
+## Licenses
+### Models
+Not applicable as no pre-trained modes are used.
+
+### Datasets
+- The seismograph data is licensed under the [Open Government License - Canada](https://open.canada.ca/en/open-government-licence-canada).
+
+### Packages
+
+Package | Version | License
+--- | --- | ---
+optuna|3.1.0|MIT License
+optuna-dashboard|0.10.0| MIT License
+pandas | 1.4.3  | BSD 3-Clause License
+transformers | 4.20.1 | Apache 2.0 License
+torchaudio | 0.12.1 | BSD 2-Clause License
+torch | 1.12.1 | BSD 3-Clause License
+pytorch_lightning | 1.9.2 | Apache2.0
+plotly | 5.9.0 | MIT License
+obspy|1.3.0 | LGPL v3.0
+matplotlib | 3.6.3 | [Customized License](https://github.com/matplotlib/matplotlib/blob/main/LICENSE/LICENSE)
+wget | 3.2 | GNU General Public License
+types-pyyam | 6.0.12.6 | Apache 2.0 license
+jsonargparse[signatures]| 4.20.0 | MIT License
+wandb | 0.15.8 | MIT License
+
