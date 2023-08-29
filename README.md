@@ -110,6 +110,23 @@ Column | Explanation | Type | Example
 `whale_type` | type of signal (`0` for noise samples and `1` for a whale call | `int` | 1
 `component` | list of components separated by space available for given station | `str` | `HHE HHN HHZ`
 
+### Split
+To split the dataset into `train`, `validation` and `test` datasets we have developped a script `scripts/split_data.py`.
+
+```
+python scripts/split_data.py -h
+usage: split_data.py [-h] [--input-file INPUT_FILE] [--output-path OUTPUT_PATH]
+Script to apply bandpass filter to a list of SAC files
+optional arguments:
+  -h, --help            show this help message and exit
+  --input-file INPUT_FILE
+                        Path to dataset (.csv) (default: data/LABELS/FW/MIXED/fw_HQ_component_grouped_filt.csv)
+  --output-path OUTPUT_PATH
+                        Path to output folder. (default: data/datasets/FWC_HQ_3CH_FILT/)
+```
+
+The dataset is split into 3 subsets using the same random seed: 80\% for the training set, 10\% for the validation set, and 10\% for the test set.
+
 ### Training
 To train a Long shot-term memory (LSTM) network, please check [LSTM](docs/lstm.md) for more details.
 

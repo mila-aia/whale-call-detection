@@ -214,13 +214,19 @@ def read_list_raw_files(sac_file_path: str) -> pd.DataFrame:
 
     # Create df from list of files
     list_files_detailled = pd.DataFrame(
-        list_files_df.str.split("/", n=7, expand=True)[[6, 7]]
-    ).rename(columns={6: "folder_date", 7: "file_name"})
+        list_files_df.str.split("/", expand=True)[[3]]
+    ).rename(columns={3: "file_name"})
+
+    # Create df from list of files
+    # list_files_detailled = pd.DataFrame(
+    #     list_files_df.str.split("/", n=7, expand=True)[[6, 7]]
+    # ).rename(columns={6: "folder_date", 7: "file_name"})
 
     # Rename columns
     list_files_detailled = list_files_detailled["file_name"].str.split(
         ".", n=7, expand=True
     )
+
     list_files_detailled = list_files_detailled.rename(
         {
             0: "year",
@@ -234,10 +240,22 @@ def read_list_raw_files(sac_file_path: str) -> pd.DataFrame:
         },
         axis=1,
     )
+
+    # Create df from list of files
+    temp_df = pd.DataFrame(
+        list_files_df.str.split("/", expand=True)[[3]]
+    ).rename(columns={3: "file_name"})
+
+    list_files_detailled["folder_date"] = temp_df["file_name"].apply(
+        lambda x: x[0:11].replace(".", "")
+    )
+    list_files_detailled["folder"] = list_files_detailled["folder_date"]
+
     # Extract folder name
-    list_files_detailled["folder"] = list_files_df.str.split(
-        "/", n=7, expand=True
-    )[[6]]
+    # list_files_detailled["folder"] = list_files_df.str.split(
+    #     "/", n=7, expand=True
+    # )[[6]]
+
     # Add list of names to path
     list_files_detailled["file_path"] = list_files_df
 
