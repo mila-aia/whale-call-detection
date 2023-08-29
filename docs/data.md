@@ -134,7 +134,7 @@ The call quality is determined by 2 factors:
 - Medium Quality: `R > 3` and `SNR > 1`.
 - Low Quality : All calls.
 
-These thresholds were decided after studying the distribution of R and SNR values accross all the different whale calls. Please check this [notebook](../notebooks/visualize_call_samples.ipynb) for mode details.
+These thresholds were decided after studying the distribution of R and SNR values accross all the different whale calls. Please check this [notebook](../notebooks/visualize_call_samples.ipynb) for more details.
 
 ##### Output dataset
 The final `.csv` datasets are saved under the `data/LABELS/BW/MIXED` and `data/LABELS/FW/MIXED` paths:
