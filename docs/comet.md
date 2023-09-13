@@ -1,4 +1,5 @@
 # Comet
+## Setup
 This page describes how to integrate `comet` into your workflow.
 1. Create a Comet account
 2. Get a Comet API key from your online account settings and set it as a environment variable
@@ -19,9 +20,10 @@ trainer = Trainer(
         logger=exp_logger
     )
 ```
-
-## Emission tracking
-```
-pip install codecarbon
-```
-Comet will then automatically use CodeCarbon to compute the emissions of the compute source being used for model training and save that data as an asset to each experiment. A `emission.csv` file will be generated as an artefact.
+## Features
+### Automatic emission tracking
+Comet will then automatically use CodeCarbon (if installed) to compute the emissions of the compute source being used for model training and save that data as an asset to each experiment. A `emission.csv` file will be generated as an artefact.
+### Report templates
+https://www.comet.com/reports-templates/baseline-classification-models-template/reports/template/baseline-classification-model-template
+### Customized panels
+https://www.comet.com/docs/v2/guides/comet-dashboard/code-panels/about-panels/
