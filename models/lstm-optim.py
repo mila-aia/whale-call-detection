@@ -7,7 +7,7 @@ from pytorch_lightning import seed_everything, Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pathlib import Path
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter, Namespace
-from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.loggers import CometLogger, CSVLogger
 
 
 def main() -> None:
@@ -74,12 +74,15 @@ def main() -> None:
         lr=best_model_conf["lr"],
     )
 
-    exp_logger = WandbLogger(
-        project=project_name,
-        group=args.exp_name,
-        name="best_model",
-        log_model=False,  # avoid uploading the model to wandb
+    exp_logger = CometLogger(
+        project_name=project_name,
+        experiment_name=experiment_name,
         save_dir=str(save_dir),
+    )
+    exp_logger.experiment.log_parameter("run_name", "best_trial")
+    csv_logger = CSVLogger(
+        save_dir=str(save_dir),
+        name=experiment_name,
     )
     early_stopper = EarlyStopping(
         monitor=metric_to_optimize,
@@ -103,7 +106,7 @@ def main() -> None:
         fast_dev_run=False,
         enable_checkpointing=True,
         check_val_every_n_epoch=1,
-        logger=exp_logger,
+        logger=[exp_logger, csv_logger],
         callbacks=[early_stopper, checkpoint_saver],
     )
 

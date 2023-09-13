@@ -1,5 +1,5 @@
 from whale.data_io.data_loader import WhaleDataModule
-from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.loggers import CometLogger, CSVLogger
 from whale.models import LSTM
 from pytorch_lightning import seed_everything, Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
@@ -14,7 +14,6 @@ def main() -> None:
     data_path = Path(args.data_path).expanduser().resolve()
     project_name = args.project
     experiment_name = args.exp_name
-    run_name = args.run_name
     input_dim = args.input_dim
     hidden_dim = args.hidden_dim
     num_layers = args.num_layers
@@ -33,14 +32,16 @@ def main() -> None:
     valid_loader = whale_dm.val_dataloader()
     test_loader = whale_dm.test_dataloader()
 
-    exp_logger = WandbLogger(
-        project=project_name,
-        group=experiment_name,
-        name=run_name,
-        log_model=False,  # avoid uploading the model to wandb
+    exp_logger = CometLogger(
+        project_name=project_name,
+        experiment_name=experiment_name,
         save_dir=str(save_dir),
     )
-    exp_logger.experiment.config.update(args)
+    csv_logger = CSVLogger(
+        save_dir=str(save_dir),
+        name=experiment_name,
+        flush_logs_every_n_steps=10,
+    )
 
     early_stopper = EarlyStopping(
         monitor=metric_to_optimize, patience=5, mode="min", verbose=True
@@ -61,7 +62,7 @@ def main() -> None:
         fast_dev_run=False,
         enable_checkpointing=True,
         check_val_every_n_epoch=1,
-        logger=exp_logger,
+        logger=[exp_logger, csv_logger],
         callbacks=[early_stopper, checkpoint_saver],
     )
 
@@ -108,9 +109,9 @@ def parse_args() -> Namespace:
     )
     arg_parser.add_argument(
         "--save-dir",
-        default="./wandb_log/",
+        default="./ml_log/",
         type=str,
-        help="path to the wandb logging directory",
+        help="path to the ML experiment logging directory",
     )
     arg_parser.add_argument(
         "--data-path",
