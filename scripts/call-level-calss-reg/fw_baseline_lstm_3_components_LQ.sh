@@ -18,7 +18,7 @@ RUN_NAME="LQ"
 
 python models/lstm.py \
     --data-path /network/projects/aia/whale_call/LABELS/FWC_3CH_LQ \
-    --save-dir /network/projects/aia/whale_call/wandb_log/$PROJECT/$EXP_NAME \
+    --save-dir /network/projects/aia/whale_call/exp_results \
     --project $PROJECT \
     --exp-name $EXP_NAME \
     --run-name $RUN_NAME \

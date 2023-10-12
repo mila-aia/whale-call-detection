@@ -38,7 +38,7 @@ def main() -> None:
         save_dir=str(save_dir),
     )
     csv_logger = CSVLogger(
-        save_dir=str(save_dir),
+        save_dir=save_dir / project_name,
         name=experiment_name,
         flush_logs_every_n_steps=10,
     )
@@ -47,6 +47,11 @@ def main() -> None:
         monitor=metric_to_optimize, patience=5, mode="min", verbose=True
     )
     checkpoint_saver = ModelCheckpoint(
+        dirpath=save_dir
+        / project_name
+        / experiment_name
+        / "ckpts"
+        / f"version_{csv_logger.version}",
         monitor=metric_to_optimize,
         mode="min",
         auto_insert_metric_name=True,
@@ -80,6 +85,9 @@ def main() -> None:
 
     trainer.fit(
         model, train_dataloaders=train_loader, val_dataloaders=valid_loader
+    )
+    exp_logger.experiment.log_parameter(
+        "best_model_path", checkpoint_saver.best_model_path
     )
     trainer.test(model, dataloaders=test_loader, ckpt_path="best")
 
