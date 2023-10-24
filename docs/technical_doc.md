@@ -35,14 +35,19 @@ A final linear layer is used to project the last hidden state of the LSRM into t
 
 $$L=L_{cls}+\lambda I_{y_{pred}=1} L_{reg}$$
 
-where $L_{cls}$ is the binary cross-entropy loss, $L_{reg}$ is the $L_1$, $I_{y_{pred}=1}$ is the indicator function and $\lambda$ is the weighting factor, which is set to 0.5 in the experiment. The model is trained for 30 epochs with a batch size of 64. 
+where $L_{cls}$ is the binary cross-entropy loss, $L_{reg}$ is the $L_1$, $I_{y_{pred}=1}$ is the indicator function and $\lambda$ is the weighting factor, which is set to 0.5 in the experiment. The model is trained for 30 epochs with a batch size of 64 using AdamW with a learning rate of $1e^{-3}$.
+
+Models are eveluated using accuracy for binary classification task and mean-absolute-error (MAE) for call time regression task.
 
 # Experiments and Results
-Similar to other data-driven methods, the performance of this detection algorithm depends on the quality of annotated data. We focus on high quality detections instead in this prototypical development effort. Heuristically, fin whale calls with $R > 5$ and $SNR > 5$ are considered as high quality detections which have 11,565 samples. Since the same filtering threshold on blue whale calls reduces the number of samples to only 1,205, we consider blue whale calls with $R > 3$ and $SNR > 1$ are considered as high quality detections which have 16,092 samples. Table 1 shows model performance on datasets before/after filtering. Model trained on this filtered dataset achieves an accuracy of 0.973 on discriminating fin whale calls against noise signals and an accuracy of 0.938 on discriminating blue whale calls against noise signals. The mean-squared errors (MSEs) of call time prediction for fin whale calls and blue whale calls are $0.08s$ and $0.86s$, respectively. The performance is better for model trained on unfiltered dataset, despite that the unfiltered datasets have a much higher dataset size. 
+The dataset contains annotation at different quality levels, as determined by $R$ and $SNR$ values. When $R$ and $SNR$ are too low, the whale call detected is not distinguishable from noise data and the call time is not clearly visible on the spectrogram (Figure 2).  We investigate the influence of this factor by training model on datasets at different quality levels (Table 1). For fin whale dataset, we created a filtered dataset (named as FW1) with $R > 5$ and $SNR > 5$, resulting in 16,092 samples. Since the same filtering threshold on blue whale calls reduces the number of samples to only 1,205 (dataset named as BW2), we created one additional filtered dataset (named as BW1) with $R > 3$ and $SNR > 1$ resulting in 16,092 samples. 
 
-| Dataset    | Data Quality | Sample Number | Accuracy | MSE|
-| -------- | ------- |--------| -------- | ------- 
-| blue whale call  | $R$ > 3 and  $SNR$ > 1   |16,092|0.938|0.86s|
-| blue whale call  | No filtering   |51,537|0.829|0.81s|
-| fin whale call  | $R$ > 5 and  $SNR$ > 5   |11,565|0.973|0.08s|
-| fin whale call  | No filtering   |186,359|0.792|0.09s|
+For fin whale call recgonition, when comraing the model trained on the unfiltered dataset FW0 to the model trained on FW1, it is observed that the latter achieves a comparable performance in the regression task while manifesting a notable improvement in its prediction accuracy, with a marked increase from 0.792 to 0.973. For blue whale call recognition, the results indicate a direct correlation between improved data quality and enhanced classification performance. In the meantime, the performance in the regression task remains relatively consistent, with the exception that the MAE of the model trained on BW2 deteriorates to 1.82s, which is more than 2x higher than other models. This discrepancy suggests that the dataset BW2, despite its superior data quality among the datasets, may possess insufficient volume for reliable call time prediction.
+
+| Dataset | Name  | Data Quality Filtering | Size | Accuracy | MAE|
+| --------|--| ------- |--------| -------- | ------- 
+| fin whale call | FW0| No filtering   |186,359|0.792|0.09s|
+| fin whale call | FW1| $R$ > 5 and  $SNR$ > 5   |11,565|0.973|0.08s|
+| blue whale call|  BW0| No filtering   |51,537|0.829|0.81s|
+| blue whale call|  BW1| $R$ > 3 and  $SNR$ > 1   |16,092|0.938|0.86s|
+| blue whale call|  BW2| $R$ > 5 and  $SNR$ > 5   | 1,205|0.959|1.82s|
