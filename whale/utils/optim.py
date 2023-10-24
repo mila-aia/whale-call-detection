@@ -4,16 +4,26 @@ from optuna.trial import Trial
 from pytorch_lightning import Trainer
 from whale.models import LSTM
 from pytorch_lightning.callbacks import EarlyStopping
-from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.loggers import CometLogger, CSVLogger
 from typing import Literal
 from torch.utils.data import DataLoader
-import wandb
+import pandas as pd
 
 
 def read_yaml(yaml_fp: Path) -> dict:
     with open(yaml_fp) as yml_file:
         data = yaml.safe_load(yml_file)
     return data
+
+
+def get_metric_value(metric_name: str, csv_fp: Path, direction: str) -> float:
+    df = pd.read_csv(csv_fp / "metrics.csv")
+    if direction == "minimize":
+        return df[metric_name].min()
+    elif direction == "maximize":
+        return df[metric_name].max()
+    else:
+        raise ValueError(f"Invalid direction: {direction}")
 
 
 def get_params(trial: Trial, hparams_space: dict) -> dict:
@@ -90,14 +100,19 @@ class LSTMTuningObjective:
             verbose=True,
         )
 
-        _logger = WandbLogger(
-            project=self.project_name,
-            group=self.experiment_name,
-            log_model=False,  # avoid uploading the model to wandb
+        _logger = CometLogger(
+            project_name=self.project_name,
+            experiment_name=self.experiment_name,
             save_dir=self.save_dir,
-            name=f"trial_{trial.number}",
         )
-        wandb.init(project=self.project_name, name=f"trial_{trial.number}")
+        _logger.experiment.log_parameter("run_name", f"trial_{trial.number}")
+
+        _csv_logger = CSVLogger(
+            save_dir=self.save_dir,
+            name=self.experiment_name,
+            flush_logs_every_n_steps=10,
+            version=trial.number,
+        )
 
         trainer = Trainer(
             max_epochs=self.epoch_num,
@@ -107,7 +122,7 @@ class LSTMTuningObjective:
             fast_dev_run=False,
             enable_checkpointing=True,
             check_val_every_n_epoch=1,
-            logger=_logger,
+            logger=[_logger, _csv_logger],
             callbacks=[early_stopper],
         )
 
@@ -116,24 +131,9 @@ class LSTMTuningObjective:
             train_dataloaders=self.train_loader,
             val_dataloaders=self.valid_loader,
         )
-
-        # get the metric to optimize from the experiment summary
-        # in wandb, this value is the last value.
-        metric_to_optimize = _logger.experiment.summary[
-            self.metric_to_optimize
-        ]
-
-        # The following code is for mlflow
-        # metric_history = _logger.experiment.get_metric_history(
-        #     _logger.run_id, self.metric_to_optimize
-        # )
-        # metric_history_array = np.array(
-        #     [metric_value.value for metric_value in metric_history]
-        # )
-        # # get the best value of the metric from metric history
-        # if self.direction == "minimize":
-        #     metric_to_optimize = metric_history_array.min()
-        # elif self.direction == "maximize":
-        #     metric_to_optimize = metric_history_array.max()
-        wandb.finish()
-        return metric_to_optimize
+        # using a CSVLogger as a helper,
+        # the following code is ml-logger agnostic
+        metric_value = get_metric_value(
+            self.metric_to_optimize, Path(_csv_logger.log_dir), self.direction
+        )
+        return metric_value

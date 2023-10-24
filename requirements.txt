@@ -13,3 +13,5 @@ wget==3.2
 wandb==0.15.8
 types-pyyaml==6.0.12.6
 jsonargparse[signatures]==4.20.0
+comet-ml==3.33.10
+codecarbon==2.1.1

@@ -155,12 +155,12 @@ The `samples.csv` has 4 columns: [`file_path`,`time_window_start`,`time_window_e
 The `predictions.csv` has 6 columns: [ `file_path`,`time_window_start`,`time_window_end`,`component`,`label_pred`,`time_pred`].
 
 
-### WandB experiment logging
-Experiments are tracked using Weighs&Biases (wandb). 
+### Comet experiment logging
+Experiments are tracked using `comet`. 
 \
-Before you get started, make sure you create a free  account at https://wandb.ai/site and then login to your wandb account. Please check this [quickstart](https://docs.wandb.ai/quickstart) for more details.
+Please check this [quickstart](https://www.comet.com/docs/v2/guides/getting-started/quickstart/) for more details on setup `comet`.
 \
-The hisory of experiments can be then visualized in your online W&B dashboard.
+The hisory of experiments can be then visualized in your online Comet dashboard.
 
 ### Consulting Optuna logs
 Optuna logs from a `optuna.sqlite3` database located in the current directory can be consulted as follow:
