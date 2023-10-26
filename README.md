@@ -132,7 +132,7 @@ The dataset is split into 3 subsets using the same random seed: 80\% for the tra
 To train a Long shot-term memory (LSTM) network, please check [LSTM](docs/lstm.md) for more details.
 
 ### Making predictions 
-To make prediction using a trained model: 
+To make prediction using a trained model (available [here](https://drive.google.com/file/d/1nZSO-n1fA14krLMt8Qa-XATC5PJWeMQs/view?usp=sharing)): 
 
 ```
 python scripts/predict.py -h
