@@ -51,10 +51,10 @@ The following commands will mount the current source code and provide access to 
 ```
 cd whale-call-detection
 docker run -it --rm \
-    -v `pwd`:/home/ner \
+    -v `pwd`:/home/whale-call-detection \
     -p 5000:5000 \
     -p 8888:8888 \
-    ner \
+    whale-call-detection \
     /bin/bash
 ```
 ### Using the GPU from inside the Docker container
@@ -62,10 +62,10 @@ To use the GPU from within the Docker container, make sure to install [nvidia-do
 ```
 cd whale-call-detection
 docker run -it --rm --runtime=nvidia \
-    -v `pwd`:/home/ner \
+    -v `pwd`:/home/whale-call-detection \
     -p 5000:5000 \
     -p 8888:8888 \
-    ner \
+    whale-call-detection \
     /bin/bash
 ```
 
@@ -129,7 +129,7 @@ The dataset is split into 3 subsets using the same random seed: 80\% for the tra
 
 ## Usage
 ### Training
-To train a Long shot-term memory (LSTM) network, please check [LSTM](docs/lstm.md) for more details.
+To train a Long shot-term memory (LSTM) network, please check [LSTM](docs/lstm.md) for more details. Samples of labels for training can be found [here](https://drive.google.com/file/d/1nf9p9E32nu6WYc0nP5LrCHLbwOkxPBfC/view?usp=sharing). Please note that raw waveform data is not included and can be downloaded following instructions in [data.md](docs/data.md).
 
 ### Making predictions 
 To make prediction using a trained model (available [here](https://drive.google.com/file/d/1nZSO-n1fA14krLMt8Qa-XATC5PJWeMQs/view?usp=sharing)): 
